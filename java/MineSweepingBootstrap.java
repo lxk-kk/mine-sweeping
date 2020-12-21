@@ -1,4 +1,4 @@
-package mine_sweeping;
+import mine_sweeping.MineWindow;
 
 import java.awt.*;
 

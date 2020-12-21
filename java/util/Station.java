@@ -1,4 +1,4 @@
-package mine_sweeping;
+package util;
 
 /**
  * @author 10652

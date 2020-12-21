@@ -1,4 +1,4 @@
-package mine_sweeping;
+package util;
 
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;

@@ -1,5 +1,7 @@
 package mine_sweeping;
 
+import util.Constant;
+
 import javax.swing.*;
 import java.awt.*;
 
@@ -10,19 +12,24 @@ import java.awt.*;
  */
 public class MineWindow extends JFrame {
     private static MineWindow instance;
-    // 8 * 8 10, 16 * 16 40, 30 * 16 99
-    private static int X = 16;
-    private static int Y = 30;
-    private static int N = 99;
-    private static int steps;
+    /**
+     * 8 * 8 10, 16 * 16 40, 30 * 16 99
+     */
+    private static final int X = 16;
+    private static final int Y = 30;
+    private static final int N = 99;
 
     JButton restartButton;
     JPanel mainWindowPanel;
     JPanel northLayoutPanel;
-    MinePanel minePanel;
-    MineBoard block;
+    MinePanelService minePanel;
     JButton robotButton;
 
+    /**
+     * 单例
+     *
+     * @return 实例
+     */
     public static MineWindow getInstance() {
         if (instance == null) {
             instance = new MineWindow();
@@ -72,10 +79,8 @@ public class MineWindow extends JFrame {
         mainWindowPanel = new JPanel();
         mainWindowPanel.setLayout(new BorderLayout());
 
-        // 雷盘：初始化雷盘
-        block = new MineBoard(X, Y, N);
         // 内容面板：用雷盘数据初始化内容面板
-        minePanel = new MinePanel(block.boardArray, X, Y, N);
+        minePanel = new MinePanelService(X, Y, N);
 
         // --------------------------
         // 顶部按钮面板（重新开始、机器人）
@@ -88,7 +93,6 @@ public class MineWindow extends JFrame {
         robotButton = new JButton(Constant.ROBOT_BUTTON_FLAG);
 
         restartButton.addActionListener(e -> {
-            // System.out.println("wight=" + button_restart.getWidth() + "; height = " + button_restart.getHeight());
             if (e.getSource() == restartButton) {
                 restart();
             }
@@ -99,7 +103,6 @@ public class MineWindow extends JFrame {
                 // steps = robot.getSteps();
             }
         });
-
         // 顶部按钮加入按钮面板中
         northLayoutPanel.add(restartButton);
         northLayoutPanel.add(robotButton);
@@ -131,9 +134,8 @@ public class MineWindow extends JFrame {
     public void restart() {
         minePanel.clear();
         mainWindowPanel.remove(minePanel);
-        block = new MineBoard(X, Y, N);
-        minePanel = new MinePanel(block.boardArray, X, Y, N);
-        minePanel.first(X, Y);
+        minePanel = new MinePanelService(X, Y, N);
+        // minePanel.first(X, Y);
         mainWindowPanel.add(minePanel, BorderLayout.CENTER);
         // 刷新整个面板
         mainWindowPanel.revalidate();

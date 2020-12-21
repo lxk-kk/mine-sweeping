@@ -1,4 +1,4 @@
-package mine_sweeping;
+package util;
 
 /**
  * @author 10652
@@ -13,7 +13,7 @@ public class Constant {
     public static final int HEIGHT = 17;
 
     public static final String BUTTON = "BUTTON_CARD_LAYOUT";
-    public static final String MINE = "MINE_CARD_LAYOUT";
+    public static final String LABEL = "MINE_CARD_LAYOUT";
     public static final String FLAG = "FLAG_LABEL_CARD_LAYOUT";
     public static final String CORRECT_FLAG = "CORRECT_FLAG_LABEL_LAYOUT";
 }

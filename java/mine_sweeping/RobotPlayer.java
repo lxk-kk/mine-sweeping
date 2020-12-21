@@ -1,5 +1,7 @@
 package mine_sweeping;
 
+import util.Station;
+
 import java.util.Random;
 
 /**
@@ -7,7 +9,7 @@ import java.util.Random;
  *
  * @author 10652
  */
-public class RobotPlayer {
+public class RobotPlayer{
     private Station[][] currentArray;
     private static int X;
     private static int Y;
@@ -15,7 +17,6 @@ public class RobotPlayer {
     private boolean play = true;
     private int blockAround;
     private int blankAreaAround;
-    private int totalAreaAround;
     private int blockFoundAround;
     private double[][] Matrix;
     private static int currentRow;
@@ -36,6 +37,11 @@ public class RobotPlayer {
         }
     }
 
+    public void flushCurrentState() {
+        play = MineWindow.getInstance().minePanel.isPlaying();
+        currentArray = MineWindow.getInstance().minePanel.getCurrentArr();
+    }
+
     /**
      * 自动扫雷策略：
      * 情况 1：根据已知区域，能够准确找到某一格无雷
@@ -43,14 +49,13 @@ public class RobotPlayer {
      * 情况 3：随意点击一个格子（例如：第一次试探，无雷，且无法判断下一次可试探的格子）
      */
     public void robotPlay() {
-        play = MineWindow.getInstance().minePanel.isPlaying();
+        flushCurrentState();
         if (!play) {
             return;
         }
-        currentArray = MineWindow.getInstance().minePanel.getCurrentArr();
         if (!bruteForce() && !GaussLiner()) {
             randomPick();
-            System.out.println("xixi");
+           // System.out.println("xixi");
         }
     }
 
@@ -187,18 +192,18 @@ public class RobotPlayer {
             //find an answer
 //			if(cur == 1) {
 //				System.out.println("find");
-//				currentRow = pos / Y + 1;
-//				currentCol = pos % Y;
+//				currentRow = pos / y + 1;
+//				currentCol = pos % y;
 //				if(currentCol == 0) {
 //					currentRow--;
-//					currentCol = Y;
+//					currentCol = y;
 //				}
 //				if(Math.abs(Matrix[i][tot + 1] - Matrix[i][pos]) < eps) {
-//					MineWindow.getInstance().panel_block.solveRightButtonEvents(currentRow, currentCol);
+//                  stepRightButton(currentRow, currentCol);
 //					return true;
 //				}
 //				else if(Math.abs(Matrix[i][tot + 1]) < eps){
-//					MineWindow.getInstance().panel_block.solveLeftButtonEvents(currentRow, currentCol);
+//                  stepLeftButton(currentRow, currentCol);
 //					return true;
 //				}
 //			}
@@ -224,13 +229,13 @@ public class RobotPlayer {
                 if (Matrix[i][j] > eps) {
                     // let it be 0, find it can not be 0, so it must be 1
                     if (positiveN - Matrix[i][j] - Matrix[i][tot + 1] < -eps) {
-                        MineWindow.getInstance().minePanel.solveRightButtonEvents(currentRow, currentCol);
+                        stepRightButton(currentRow, currentCol);
                         //	System.out.println(positiveN + " " + negativeN + " " + Matrix[i][tot + 1] + " find1");
                         return true;
                     }
                     // let it be 1, find it can not be 1, so it must be 0
                     if (Matrix[i][j] + negativeN - Matrix[i][tot + 1] > eps) {
-                        MineWindow.getInstance().minePanel.solveLeftButtonEvents(currentRow, currentCol);
+                        stepLeftButton(currentRow, currentCol);
                         //	System.out.println(positiveN + " " + negativeN + " " + Matrix[i][tot + 1] + " find2");
                         return true;
                     }
@@ -238,13 +243,13 @@ public class RobotPlayer {
                 if (Matrix[i][j] < -eps) {
                     // let it be 0, find it can not be 0, so it must be 1
                     if (negativeN - Matrix[i][j] - Matrix[i][tot + 1] > eps) {
-                        MineWindow.getInstance().minePanel.solveRightButtonEvents(currentRow, currentCol);
+                        stepRightButton(currentRow, currentCol);
                         //	System.out.println(positiveN + " " + negativeN + " " + Matrix[i][tot + 1] + " find3");
                         return true;
                     }
                     // let it be 1, find it can not be 1, so it must be 0
                     if (Matrix[i][j] + positiveN - Matrix[i][tot + 1] < -eps) {
-                        MineWindow.getInstance().minePanel.solveLeftButtonEvents(currentRow, currentCol);
+                        stepLeftButton(currentRow, currentRow);
                         //	System.out.println(positiveN + " " + negativeN + " " + Matrix[i][tot + 1] + " find4");
                         return true;
                     }
@@ -261,7 +266,7 @@ public class RobotPlayer {
             newX = blockCreator.nextInt(X) + 1;
             newY = blockCreator.nextInt(Y) + 1;
             if (currentArray[newX][newY] == Station.unknown) {
-                Leftsolution(newX, newY);
+                stepLeftButton(newX, newY);
                 break;
             }
         }
@@ -287,7 +292,6 @@ public class RobotPlayer {
     private boolean tryClick(int x, int y) {
         // getBlockAround(i, j); 使用下面这句代替
         blockAround = currentArray[x][y].getValue();
-        totalAreaAround = 0;
         blankAreaAround = 0;
         blockFoundAround = 0;
         if (x - 1 >= 1 && y - 1 >= 1) {
@@ -321,35 +325,35 @@ public class RobotPlayer {
         // 右键处理？？标记？？
         if (blankAreaAround == blockAround - blockFoundAround) {
             if (canClick(x - 1, y - 1)) {
-                Rightsolution(x - 1, y - 1);
+                stepRightButton(x - 1, y - 1);
                 return true;
             }
             if (canClick(x - 1, y)) {
-                Rightsolution(x - 1, y);
+                stepRightButton(x - 1, y);
                 return true;
             }
             if (canClick(x - 1, y + 1)) {
-                Rightsolution(x - 1, y + 1);
+                stepRightButton(x - 1, y + 1);
                 return true;
             }
             if (canClick(x, y - 1)) {
-                Rightsolution(x, y - 1);
+                stepRightButton(x, y - 1);
                 return true;
             }
             if (canClick(x, y + 1)) {
-                Rightsolution(x, y + 1);
+                stepRightButton(x, y + 1);
                 return true;
             }
             if (canClick(x + 1, y - 1)) {
-                Rightsolution(x + 1, y - 1);
+                stepRightButton(x + 1, y - 1);
                 return true;
             }
             if (canClick(x + 1, y)) {
-                Rightsolution(x + 1, y);
+                stepRightButton(x + 1, y);
                 return true;
             }
             if (canClick(x + 1, y + 1)) {
-                Rightsolution(x + 1, y + 1);
+                stepRightButton(x + 1, y + 1);
                 return true;
             }
         }
@@ -357,35 +361,35 @@ public class RobotPlayer {
         // 左键事件处理！
         if (blockAround == blockFoundAround) {
             if (canClick(x - 1, y - 1)) {
-                Leftsolution(x - 1, y - 1);
+                stepLeftButton(x - 1, y - 1);
                 return true;
             }
             if (canClick(x - 1, y)) {
-                Leftsolution(x - 1, y);
+                stepLeftButton(x - 1, y);
                 return true;
             }
             if (canClick(x - 1, y + 1)) {
-                Leftsolution(x - 1, y + 1);
+                stepLeftButton(x - 1, y + 1);
                 return true;
             }
             if (canClick(x, y - 1)) {
-                Leftsolution(x, y - 1);
+                stepLeftButton(x, y - 1);
                 return true;
             }
             if (canClick(x, y + 1)) {
-                Leftsolution(x, y + 1);
+                stepLeftButton(x, y + 1);
                 return true;
             }
             if (canClick(x + 1, y - 1)) {
-                Leftsolution(x + 1, y - 1);
+                stepLeftButton(x + 1, y - 1);
                 return true;
             }
             if (canClick(x + 1, y)) {
-                Leftsolution(x + 1, y);
+                stepLeftButton(x + 1, y);
                 return true;
             }
             if (canClick(x + 1, y + 1)) {
-                Leftsolution(x + 1, y + 1);
+                stepLeftButton(x + 1, y + 1);
                 return true;
             }
         }
@@ -402,7 +406,6 @@ public class RobotPlayer {
     }
 
     private void query(int x, int y) {
-        totalAreaAround++;
         if (currentArray[x][y] == Station.unknown) {
             blankAreaAround++;
         } else if (currentArray[x][y] == Station.mine) {
@@ -410,11 +413,11 @@ public class RobotPlayer {
         }
     }
 
-    private void Leftsolution(int x, int y) {
+    private void stepLeftButton(int x, int y) {
         MineWindow.getInstance().minePanel.solveLeftButtonEvents(x, y);
     }
 
-    private void Rightsolution(int x, int y) {
+    private void stepRightButton(int x, int y) {
         MineWindow.getInstance().minePanel.solveRightButtonEvents(x, y);
     }
 
