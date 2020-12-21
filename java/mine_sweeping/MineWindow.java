@@ -12,12 +12,10 @@ import java.awt.*;
  */
 public class MineWindow extends JFrame {
     private static MineWindow instance;
-    /**
-     * 8 * 8 10, 16 * 16 40, 30 * 16 99
-     */
-    private static final int X = 16;
-    private static final int Y = 30;
-    private static final int N = 99;
+
+    private int xDim;
+    private int yDim;
+    private int mineTotal;
 
     JButton restartButton;
     JPanel mainWindowPanel;
@@ -75,19 +73,21 @@ public class MineWindow extends JFrame {
      * 初始化窗口面板（所有内容）
      */
     private void readyMainWinPanel() {
+        this.xDim = Constant.X_DIMENSION;
+        this.yDim = Constant.Y_DIMENSION;
+        this.mineTotal = Constant.MINE_TOTAL;
+
         // 窗口面板
         mainWindowPanel = new JPanel();
         mainWindowPanel.setLayout(new BorderLayout());
 
         // 内容面板：用雷盘数据初始化内容面板
-        minePanel = new MinePanelService(X, Y, N);
+        minePanel = new MinePanelService(xDim, yDim, mineTotal);
 
-        // --------------------------
         // 顶部按钮面板（重新开始、机器人）
         northLayoutPanel = new JPanel();
         northLayoutPanel.setLayout(new GridLayout());
 
-        // --------------------------
         // 按钮
         restartButton = new JButton(Constant.RESTART_BUTTON_FLAG);
         robotButton = new JButton(Constant.ROBOT_BUTTON_FLAG);
@@ -99,7 +99,8 @@ public class MineWindow extends JFrame {
         });
         robotButton.addActionListener(e -> {
             if (e.getSource() == robotButton) {
-                RobotPlayer robot = new RobotPlayer(X, Y);
+                RobotPlayer robot = new RobotPlayer(xDim, yDim);
+                robot.robotPlay();
                 // steps = robot.getSteps();
             }
         });
@@ -107,7 +108,6 @@ public class MineWindow extends JFrame {
         northLayoutPanel.add(restartButton);
         northLayoutPanel.add(robotButton);
 
-        // --------------------------
         // 窗口面板（子面板“装箱”）
         mainWindowPanel.add(minePanel, BorderLayout.CENTER);
         mainWindowPanel.add(northLayoutPanel, BorderLayout.NORTH);
@@ -132,10 +132,8 @@ public class MineWindow extends JFrame {
      * 移除绘制的内容面板，再初始化新内容面板，加入窗口面板中，最后刷新整个窗口面板
      */
     public void restart() {
-        minePanel.clear();
         mainWindowPanel.remove(minePanel);
-        minePanel = new MinePanelService(X, Y, N);
-        // minePanel.first(X, Y);
+        minePanel = new MinePanelService(xDim, yDim, mineTotal);
         mainWindowPanel.add(minePanel, BorderLayout.CENTER);
         // 刷新整个面板
         mainWindowPanel.revalidate();

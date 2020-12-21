@@ -16,4 +16,12 @@ public class Constant {
     public static final String LABEL = "MINE_CARD_LAYOUT";
     public static final String FLAG = "FLAG_LABEL_CARD_LAYOUT";
     public static final String CORRECT_FLAG = "CORRECT_FLAG_LABEL_LAYOUT";
+    /**
+     * 8 * 8 10
+     * 16 * 16 40
+     * 30 * 16 99
+     */
+    public static final int X_DIMENSION = 8;
+    public static final int Y_DIMENSION = 8;
+    public static final int MINE_TOTAL = 10;
 }

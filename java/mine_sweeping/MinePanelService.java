@@ -11,7 +11,7 @@ import java.awt.event.MouseEvent;
 /**
  * @author 10652
  */
-public class MinePanelService extends MineBoardService {
+public class MinePanelService extends AbstractMineBoardService {
     private static final long serialVersionUID = 299452544351890642L;
     private final JPanel[][] panelArr;
     private final JLabel[][] labelArr;
@@ -20,134 +20,139 @@ public class MinePanelService extends MineBoardService {
     private final JLabel[][] correctFlagArr;
 
 
-    public MinePanelService(int X, int Y, int N) {
-        super(X, Y, N);
-        this.setLayout(new GridLayout(X, Y, 0, 0));
+    public MinePanelService(int x, int y, int n) {
+        super(x, y, n);
+        this.setLayout(new GridLayout(xDim, yDim, 0, 0));
         // 雷盘
-        panelArr = new JPanel[X + 1][Y + 1];
+        panelArr = new JPanel[xDim + 1][yDim + 1];
         // 按钮
-        buttonArr = new JButton[X + 1][Y + 1];
+        buttonArr = new JButton[xDim + 1][yDim + 1];
         // 标签
-        labelArr = new JLabel[X + 1][Y + 1];
+        labelArr = new JLabel[xDim + 1][yDim + 1];
         // 标记
-        flagArr = new JLabel[X + 1][Y + 1];
+        flagArr = new JLabel[xDim + 1][yDim + 1];
         // 正确标记
-        correctFlagArr = new JLabel[X + 1][Y + 1];
+        correctFlagArr = new JLabel[xDim + 1][yDim + 1];
+        createMinePanel();
+    }
 
-        for (int i = 1; i <= X; ++i) {
-            for (int j = 1; j <= Y; ++j) {
+    public void createMinePanel() {
+        for (int x = 1; x <= xDim; ++x) {
+            for (int y = 1; y <= yDim; ++y) {
                 // 创建格子面板
-                panelArr[i][j] = new JPanel();
+                panelArr[x][y] = new JPanel();
                 // 设置格子面板的布局为：卡片布局
-                panelArr[i][j].setLayout(new CardLayout());
-
-                // -----------------------------
+                panelArr[x][y].setLayout(new CardLayout());
                 // 按钮设置：可点击
-                buttonArr[i][j] = new JButton();
-                // 设置按钮边框：具有凸出斜面边缘的边框！（视觉效果）
-                buttonArr[i][j].setBorder(BorderFactory.createRaisedBevelBorder());
-                // 为按钮添加监听器
-                buttonArr[i][j].addMouseListener((MouseListenerFactory) e -> {
-                    // System.out.println("wight = " + buttonArr[1][1].getWidth() + "; height = " + buttonArr[1][1]
-                    // .getHeight());
-                    for (int idx = 1; idx <= X; ++idx) {
-                        for (int idy = 1; idy <= Y; ++idy) {
-                            if (e.getSource() == buttonArr[idx][idy]) {
-                                // 左键事件
-                                if (e.getButton() == MouseEvent.BUTTON1) {
-                                    solveLeftButtonEvents(idx, idy);
-                                }
-                                // 右键事件
-                                if (e.getButton() == MouseEvent.BUTTON3) {
-                                    solveRightButtonEvents(idx, idy);
-                                }
-                            }
-                        }
-                    }
-                });
-
-                // -----------------------------
+                createMineButton(x, y);
                 // 标签设置：仅显示，不可点击
-                labelArr[i][j] = new JLabel();
-                // 设置标签边框：具有凹入斜面边缘的边框
-                labelArr[i][j].setBorder(BorderFactory.createLoweredBevelBorder());
-                labelArr[i][j].setFont(new java.awt.Font("微软雅黑", 1, 14));
-                // 雷格子：标签显示地雷图标
-                if (boardArray[i][j] == Station.mine) {
-                    labelArr[i][j].setIcon(getImage(Constant.MINE_ICON));
-                } else if (boardArray[i][j] == Station.zero) {
-                    // 周围无雷：不显示
-                    labelArr[i][j].setText(Station.zero.getText());
-                } else {
-                    // 周围有雷：显示周围雷数（设置背景、设置数量）
-                    labelArr[i][j].setText(boardArray[i][j].getText());
-                    switch (boardArray[i][j]) {
-                        default:
-                            // todo 弹窗显示系统错误：逻辑上不会有问题
-                            System.out.println("Error");
-                            break;
-                        case one:
-                            labelArr[i][j].setForeground(Color.BLUE);
-                            break;
-                        case two:
-                            labelArr[i][j].setForeground(Color.ORANGE);
-                            break;
-                        case three:
-                            labelArr[i][j].setForeground(Color.RED);
-                            break;
-                        case four:
-                            labelArr[i][j].setForeground(Color.cyan);
-                            break;
-                        case five:
-                            labelArr[i][j].setForeground(Color.BLACK);
-                            break;
-                        case six:
-                            labelArr[i][j].setForeground(Color.MAGENTA);
-                            break;
-                        case seven:
-                            labelArr[i][j].setForeground(Color.green);
-                            break;
-                        case eight:
-                            labelArr[i][j].setForeground(Color.darkGray);
-                            break;
-                    }
-                }
-
-                // -----------------------------
+                createMineLabel(x, y);
                 // 标记设置：可点击
-                flagArr[i][j] = new JLabel();
-                flagArr[i][j].setBorder(BorderFactory.createLoweredBevelBorder());
-                flagArr[i][j].setIcon(getImage(Constant.FLAG_ICON));
-                flagArr[i][j].addMouseListener((MouseListenerFactory) e -> {
-                    for (int idx = 1; idx <= X; ++idx) {
-                        for (int idy = 1; idy <= Y; ++idy) {
-                            if (e.getSource() == flagArr[idx][idy]) {
-                                // 鼠标右键
-                                if (e.getButton() == MouseEvent.BUTTON3) {
-                                    solveRightButtonEvents(idx, idy);
-                                }
-                            }
-                        }
-                    }
-                });
-
-
-                // -----------------------------
+                createMineFlag(x, y);
                 // 正确标记设置
-                correctFlagArr[i][j] = new JLabel();
-                correctFlagArr[i][j].setBorder(BorderFactory.createLoweredBevelBorder());
-                correctFlagArr[i][j].setIcon(getImage(Constant.FLAG_TWO_ICON));
-
-                // -----------------------------
+                createMineCorFlag(x, y);
                 // 将按钮、标签、标记、正确标记 等组件添加到格子面板中
-                panelArr[i][j].add(buttonArr[i][j], Constant.BUTTON);
-
-                panelArr[i][j].add(labelArr[i][j], Constant.LABEL);
-                panelArr[i][j].add(flagArr[i][j], Constant.FLAG);
-                panelArr[i][j].add(correctFlagArr[i][j], Constant.CORRECT_FLAG);
-                this.add(panelArr[i][j]);
+                this.add(panelArr[x][y]);
             }
         }
+    }
+
+    private void createMineButton(int x, int y) {
+        // 按钮设置：可点击
+        buttonArr[x][y] = new JButton();
+        // 设置按钮边框：具有凸出斜面边缘的边框！（视觉效果）
+        buttonArr[x][y].setBorder(BorderFactory.createRaisedBevelBorder());
+        // 为按钮添加监听器
+        buttonArr[x][y].addMouseListener((MouseListenerFactory) e -> {
+            for (int idx = 1; idx <= xDim; ++idx) {
+                for (int idy = 1; idy <= yDim; ++idy) {
+                    if (e.getSource() == buttonArr[idx][idy]) {
+                        // 左键事件
+                        if (e.getButton() == MouseEvent.BUTTON1) {
+                            solveLeftButtonEvents(idx, idy);
+                        }
+                        // 右键事件
+                        if (e.getButton() == MouseEvent.BUTTON3) {
+                            solveRightButtonEvents(idx, idy);
+                        }
+                    }
+                }
+            }
+        });
+        panelArr[x][y].add(buttonArr[x][y], Constant.BUTTON);
+    }
+
+    private void createMineLabel(int x, int y) {
+        labelArr[x][y] = new JLabel();
+        // 设置标签边框：具有凹入斜面边缘的边框
+        labelArr[x][y].setBorder(BorderFactory.createLoweredBevelBorder());
+        labelArr[x][y].setFont(new java.awt.Font("微软雅黑", 1, 14));
+        // 雷格子：标签显示地雷图标
+        if (boardArray[x][y] == Station.mine) {
+            labelArr[x][y].setIcon(getImage(Constant.MINE_ICON));
+        } else if (boardArray[x][y] == Station.zero) {
+            // 周围无雷：不显示
+            labelArr[x][y].setText(Station.zero.getText());
+        } else {
+            // 周围有雷：显示周围雷数（设置背景、设置数量）
+            labelArr[x][y].setText(boardArray[x][y].getText());
+            switch (boardArray[x][y]) {
+                default:
+                    System.out.println("Error");
+                    break;
+                case one:
+                    labelArr[x][y].setForeground(Color.BLUE);
+                    break;
+                case two:
+                    labelArr[x][y].setForeground(Color.ORANGE);
+                    break;
+                case three:
+                    labelArr[x][y].setForeground(Color.RED);
+                    break;
+                case four:
+                    labelArr[x][y].setForeground(Color.cyan);
+                    break;
+                case five:
+                    labelArr[x][y].setForeground(Color.BLACK);
+                    break;
+                case six:
+                    labelArr[x][y].setForeground(Color.MAGENTA);
+                    break;
+                case seven:
+                    labelArr[x][y].setForeground(Color.green);
+                    break;
+                case eight:
+                    labelArr[x][y].setForeground(Color.darkGray);
+                    break;
+            }
+        }
+        panelArr[x][y].add(labelArr[x][y], Constant.LABEL);
+    }
+
+    private void createMineFlag(int x, int y) {
+        flagArr[x][y] = new JLabel();
+        flagArr[x][y].setBorder(BorderFactory.createLoweredBevelBorder());
+        flagArr[x][y].setIcon(getImage(Constant.FLAG_ICON));
+        flagArr[x][y].addMouseListener((MouseListenerFactory) e -> {
+            for (int idx = 1; idx <= xDim; ++idx) {
+                for (int idy = 1; idy <= yDim; ++idy) {
+                    if (e.getSource() == flagArr[idx][idy]) {
+                        // 鼠标右键
+                        if (e.getButton() == MouseEvent.BUTTON3) {
+                            solveRightButtonEvents(idx, idy);
+                        }
+                    }
+                }
+            }
+        });
+        panelArr[x][y].add(flagArr[x][y], Constant.FLAG);
+    }
+
+    private void createMineCorFlag(int x, int y) {
+        correctFlagArr[x][y] = new JLabel();
+        correctFlagArr[x][y].setBorder(BorderFactory.createLoweredBevelBorder());
+        correctFlagArr[x][y].setIcon(getImage(Constant.FLAG_TWO_ICON));
+        panelArr[x][y].add(correctFlagArr[x][y], Constant.CORRECT_FLAG);
     }
 
     /**
@@ -182,70 +187,61 @@ public class MinePanelService extends MineBoardService {
         stepByRightButton(x, y);
     }
 
-    /**
-     * 显示 Button
-     *
-     * @param X
-     * @param Y
-     */
-    public void first(int X, int Y) {
-        for (int i = 1; i <= X; ++i) {
-            for (int j = 1; j <= Y; ++j) {
-                showButtonIcon(i, j);
+    @Override
+    public void firstStepChangeFace() {
+        for (int x = 1; x <= xDim; x++) {
+            for (int y = 1; y <= yDim; y++) {
+                if (boardArray[x][y].getValue() != boardArrayPre[x][y].getValue()) {
+                    flushMineLabel(x, y);
+                }
             }
         }
     }
 
     /**
-     * 清理面板
+     * 刷新面板：仅仅刷新面板中的标签即可！
      */
-    public void clear() {
-        for (int i = 1; i <= x; ++i) {
-            for (int j = 1; j <= y; ++j) {
-                panelArr[i][j].remove(buttonArr[i][j]);
-                panelArr[i][j].remove(flagArr[i][j]);
-                panelArr[i][j].remove(labelArr[i][j]);
-                this.remove(panelArr[i][j]);
-            }
-        }
+    public void flushMineLabel(int x, int y) {
+        panelArr[x][y].remove(labelArr[x][y]);
+        createMineLabel(x, y);
     }
 
     @Override
-    void showButtonIcon(int x, int y) {
+    public void showButtonIcon(int x, int y) {
         CardLayout layout = (CardLayout) panelArr[x][y].getLayout();
         layout.show(panelArr[x][y], Constant.BUTTON);
     }
 
     @Override
-    void showLabelIcon(int x, int y) {
+    public void showLabelIcon(int x, int y) {
         CardLayout layout = (CardLayout) panelArr[x][y].getLayout();
         layout.show(panelArr[x][y], Constant.LABEL);
     }
 
     @Override
-    void showFlagIcon(int x, int y) {
+    public void showFlagIcon(int x, int y) {
         CardLayout layout = (CardLayout) panelArr[x][y].getLayout();
         layout.show(panelArr[x][y], Constant.FLAG);
     }
 
     @Override
-    void showCorrectFlagIcon(int x, int y) {
+    public void showCorrectFlagIcon(int x, int y) {
         CardLayout layout = (CardLayout) panelArr[x][y].getLayout();
         layout.show(panelArr[x][y], Constant.CORRECT_FLAG);
     }
 
     @Override
-    void showGameOver() {
+    public void showGameOver() {
         // 雷盘摊牌：显示雷区（注意：标记正确的区域）
-        for (int i = 1; i <= x; ++i) {
-            for (int j = 1; j <= y; ++j) {
+        for (int x = 1; x <= xDim; ++x) {
+            for (int y = 1; y <= yDim; ++y) {
                 // 标记成功：显示标记结果！
-                if (boardArray[i][j] == Station.mine && currentArr[i][j] == Station.mine) {
-                    showCorrectFlagIcon(i, j);
-                } else if (boardArray[i][j] == Station.mine && currentArr[i][j] != Station.mine) {
-                    showLabelIcon(i, j);
+                if (boardArray[x][y] == Station.mine && currentArr[x][y] == Station.mine) {
+                    showCorrectFlagIcon(x, y);
+                } else if (boardArray[x][y] == Station.mine && currentArr[x][y] != Station.mine) {
+                    showLabelIcon(x, y);
                 }
-                buttonArr[i][j].setEnabled(false);
+                buttonArr[x][y].setEnabled(false);
             }
         }
     }

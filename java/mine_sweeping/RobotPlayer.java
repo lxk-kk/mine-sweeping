@@ -5,42 +5,30 @@ import util.Station;
 import java.util.Random;
 
 /**
- * 机器人自动扫雷（1次）
+ * 机器人自动扫雷
  *
  * @author 10652
  */
-public class RobotPlayer{
-    private Station[][] currentArray;
-    private static int X;
-    private static int Y;
-    private static int tot;
-    private boolean play = true;
+public class RobotPlayer {
+    public Station[][] currentArray;
+    private static int xDim;
+    private static int yDim;
     private int blockAround;
     private int blankAreaAround;
     private int blockFoundAround;
-    private double[][] Matrix;
-    private static int currentRow;
-    private static int currentCol;
-    private static double eps = 1e-10;
+    private static final double eps = 1e-10;
 
-    public RobotPlayer(int X, int Y) {
-        RobotPlayer.X = X;
-        RobotPlayer.Y = Y;
-        currentArray = new Station[X + 1][Y + 1];
-        for (int i = 1; i <= X; ++i) {
-            for (int j = 1; j <= Y; ++j) {
-                currentArray[i][j] = Station.unknown;
+    public RobotPlayer(int xDim, int yDim) {
+        RobotPlayer.xDim = xDim;
+        RobotPlayer.yDim = yDim;
+        currentArray = new Station[xDim + 1][yDim + 1];
+        for (int x = 1; x <= xDim; ++x) {
+            for (int y = 1; y <= yDim; ++y) {
+                currentArray[x][y] = Station.unknown;
             }
         }
-        while (play) {
-            robotPlay();
-        }
     }
 
-    public void flushCurrentState() {
-        play = MineWindow.getInstance().minePanel.isPlaying();
-        currentArray = MineWindow.getInstance().minePanel.getCurrentArr();
-    }
 
     /**
      * 自动扫雷策略：
@@ -50,13 +38,19 @@ public class RobotPlayer{
      */
     public void robotPlay() {
         flushCurrentState();
-        if (!play) {
-            return;
+        while (flushPlayState()) {
+            if (!bruteForce() && !gaussLiner()) {
+                randomPick();
+            }
         }
-        if (!bruteForce() && !GaussLiner()) {
-            randomPick();
-           // System.out.println("xixi");
-        }
+    }
+
+    public boolean flushPlayState() {
+        return MineWindow.getInstance().minePanel.isPlaying();
+    }
+
+    public void flushCurrentState() {
+        currentArray = MineWindow.getInstance().minePanel.getCurrentArr();
     }
 
     /**
@@ -64,118 +58,120 @@ public class RobotPlayer{
      *
      * @return
      */
-    private boolean GaussLiner() {
-        tot = X * Y;
-        Matrix = new double[tot + 1][tot + 2];
+    private boolean gaussLiner() {
+        int tot = xDim * yDim;
+        double[][] matrix = new double[tot + 1][tot + 2];
         for (int i = 1; i <= tot; ++i) {
             for (int j = 1; j <= tot + 1; ++j) {
-                Matrix[i][j] = 0.0;
+                matrix[i][j] = 0.0;
             }
         }
-        for (int i = 1; i <= X; ++i) {
-            for (int j = 1; j <= Y; ++j) {
-                if (currentArray[i][j] == Station.mine || currentArray[i][j] == Station.unknown || currentArray[i][j] == Station.zero) {
+        int currentRow;
+        int currentCol;
+        for (int x = 1; x <= xDim; ++x) {
+            for (int y = 1; y <= yDim; ++y) {
+                if (currentArray[x][y] == Station.mine || currentArray[x][y] == Station.unknown || currentArray[x][y] == Station.zero) {
                     continue;
                 }
-                currentRow = (i - 1) * Y + j;
+                currentRow = (x - 1) * yDim + y;
                 // getBlockAround(i, j); 使用下面这句代替
-                blockAround = currentArray[i][j].getValue();
-                if (i > 1 && j > 1) {
-                    if (currentArray[i - 1][j - 1] == Station.unknown) {
-                        currentCol = (i - 2) * Y + j - 1;
-                        Matrix[currentRow][currentCol] = 1.0;
+                blockAround = currentArray[x][y].getValue();
+                if (x > 1 && y > 1) {
+                    if (currentArray[x - 1][y - 1] == Station.unknown) {
+                        currentCol = (x - 2) * yDim + y - 1;
+                        matrix[currentRow][currentCol] = 1.0;
                     }
-                    if (currentArray[i - 1][j - 1] == Station.mine) {
+                    if (currentArray[x - 1][y - 1] == Station.mine) {
                         blockAround--;
                     }
                 }
-                if (i > 1) {
-                    if (currentArray[i - 1][j] == Station.unknown) {
-                        currentCol = (i - 2) * Y + j;
-                        Matrix[currentRow][currentCol] = 1.0;
+                if (x > 1) {
+                    if (currentArray[x - 1][y] == Station.unknown) {
+                        currentCol = (x - 2) * yDim + y;
+                        matrix[currentRow][currentCol] = 1.0;
                     }
-                    if (currentArray[i - 1][j] == Station.mine) {
+                    if (currentArray[x - 1][y] == Station.mine) {
                         blockAround--;
                     }
                 }
-                if (i > 1 && j < Y) {
-                    if (currentArray[i - 1][j + 1] == Station.unknown) {
-                        currentCol = (i - 2) * Y + j + 1;
-                        Matrix[currentRow][currentCol] = 1.0;
+                if (x > 1 && y < yDim) {
+                    if (currentArray[x - 1][y + 1] == Station.unknown) {
+                        currentCol = (x - 2) * yDim + y + 1;
+                        matrix[currentRow][currentCol] = 1.0;
                     }
-                    if (currentArray[i - 1][j + 1] == Station.mine) {
+                    if (currentArray[x - 1][y + 1] == Station.mine) {
                         blockAround--;
                     }
                 }
-                if (j > 1) {
-                    if (currentArray[i][j - 1] == Station.unknown) {
-                        currentCol = (i - 1) * Y + j - 1;
-                        Matrix[currentRow][currentCol] = 1.0;
+                if (y > 1) {
+                    if (currentArray[x][y - 1] == Station.unknown) {
+                        currentCol = (x - 1) * yDim + y - 1;
+                        matrix[currentRow][currentCol] = 1.0;
                     }
-                    if (currentArray[i][j - 1] == Station.mine) {
+                    if (currentArray[x][y - 1] == Station.mine) {
                         blockAround--;
                     }
                 }
-                if (j < Y) {
-                    if (currentArray[i][j + 1] == Station.unknown) {
-                        currentCol = (i - 1) * Y + j + 1;
-                        Matrix[currentRow][currentCol] = 1.0;
+                if (y < yDim) {
+                    if (currentArray[x][y + 1] == Station.unknown) {
+                        currentCol = (x - 1) * yDim + y + 1;
+                        matrix[currentRow][currentCol] = 1.0;
                     }
-                    if (currentArray[i][j + 1] == Station.mine) {
+                    if (currentArray[x][y + 1] == Station.mine) {
                         blockAround--;
                     }
                 }
-                if (i < X && j > 1) {
-                    if (currentArray[i + 1][j - 1] == Station.unknown) {
-                        currentCol = i * Y + j - 1;
-                        Matrix[currentRow][currentCol] = 1.0;
+                if (x < xDim && y > 1) {
+                    if (currentArray[x + 1][y - 1] == Station.unknown) {
+                        currentCol = x * yDim + y - 1;
+                        matrix[currentRow][currentCol] = 1.0;
                     }
-                    if (currentArray[i + 1][j - 1] == Station.mine) {
+                    if (currentArray[x + 1][y - 1] == Station.mine) {
                         blockAround--;
                     }
                 }
-                if (i < X) {
-                    if (currentArray[i + 1][j] == Station.unknown) {
-                        currentCol = i * Y + j;
-                        Matrix[currentRow][currentCol] = 1.0;
+                if (x < xDim) {
+                    if (currentArray[x + 1][y] == Station.unknown) {
+                        currentCol = x * yDim + y;
+                        matrix[currentRow][currentCol] = 1.0;
                     }
-                    if (currentArray[i + 1][j] == Station.mine) {
+                    if (currentArray[x + 1][y] == Station.mine) {
                         blockAround--;
                     }
                 }
-                if (i < X && j < Y) {
-                    if (currentArray[i + 1][j + 1] == Station.unknown) {
-                        currentCol = i * Y + j + 1;
-                        Matrix[currentRow][currentCol] = 1.0;
+                if (x < xDim && y < yDim) {
+                    if (currentArray[x + 1][y + 1] == Station.unknown) {
+                        currentCol = x * yDim + y + 1;
+                        matrix[currentRow][currentCol] = 1.0;
                     }
-                    if (currentArray[i + 1][j + 1] == Station.mine) {
+                    if (currentArray[x + 1][y + 1] == Station.mine) {
                         blockAround--;
                     }
                 }
-                Matrix[currentRow][tot + 1] = (double) blockAround;
+                matrix[currentRow][tot + 1] = (double) blockAround;
             }
         }
         int cur, pos = 1;
         for (int i = 1; i <= tot; ++i) {
             for (int j = pos; j <= tot; ++j) {
-                if (Math.abs(Matrix[j][i]) > eps) {
+                if (Math.abs(matrix[j][i]) > eps) {
                     for (int k = i; k <= tot + 1; ++k) {
-                        double tmp = Matrix[j][k];
-                        Matrix[j][k] = Matrix[pos][k];
-                        Matrix[pos][k] = tmp;
+                        double tmp = matrix[j][k];
+                        matrix[j][k] = matrix[pos][k];
+                        matrix[pos][k] = tmp;
                     }
                     break;
                 }
             }
-            if (Math.abs(Matrix[pos][i]) < eps) {
+            if (Math.abs(matrix[pos][i]) < eps) {
                 //		pos++;
                 continue;
             }
             for (int j = 1; j <= tot; ++j) {
-                if (j != pos && Math.abs(Matrix[j][i]) > eps) {
-                    double tmp = Matrix[j][i] / Matrix[pos][i];
+                if (j != pos && Math.abs(matrix[j][i]) > eps) {
+                    double tmp = matrix[j][i] / matrix[pos][i];
                     for (int k = i; k <= tot + 1; ++k) {
-                        Matrix[j][k] -= tmp * Matrix[pos][k];
+                        matrix[j][k] -= tmp * matrix[pos][k];
                     }
                 }
             }
@@ -184,7 +180,7 @@ public class RobotPlayer{
         for (int i = 1; i <= tot; ++i) {
             cur = 0;
             for (int j = 1; j <= tot; ++j) {
-                if (Math.abs(Matrix[i][j]) > eps) {
+                if (Math.abs(matrix[i][j]) > eps) {
                     cur++;
                     pos = j;
                 }
@@ -192,11 +188,11 @@ public class RobotPlayer{
             //find an answer
 //			if(cur == 1) {
 //				System.out.println("find");
-//				currentRow = pos / y + 1;
-//				currentCol = pos % y;
+//				currentRow = pos / yDim + 1;
+//				currentCol = pos % yDim;
 //				if(currentCol == 0) {
 //					currentRow--;
-//					currentCol = y;
+//					currentCol = yDim;
 //				}
 //				if(Math.abs(Matrix[i][tot + 1] - Matrix[i][pos]) < eps) {
 //                  stepRightButton(currentRow, currentCol);
@@ -212,44 +208,44 @@ public class RobotPlayer{
             double positiveN = 0;
             double negativeN = 0;
             for (int j = 1; j <= tot; ++j) {
-                if (Matrix[i][j] > eps) {
-                    positiveN += Matrix[i][j];
+                if (matrix[i][j] > eps) {
+                    positiveN += matrix[i][j];
                 }
-                if (Matrix[i][j] < -eps) {
-                    negativeN += Matrix[i][j];
+                if (matrix[i][j] < -eps) {
+                    negativeN += matrix[i][j];
                 }
             }
             for (int j = 1; j <= tot; ++j) {
-                currentRow = j / Y + 1;
-                currentCol = j % Y;
+                currentRow = j / yDim + 1;
+                currentCol = j % yDim;
                 if (currentCol == 0) {
                     currentRow--;
-                    currentCol = Y;
+                    currentCol = yDim;
                 }
-                if (Matrix[i][j] > eps) {
+                if (matrix[i][j] > eps) {
                     // let it be 0, find it can not be 0, so it must be 1
-                    if (positiveN - Matrix[i][j] - Matrix[i][tot + 1] < -eps) {
+                    if (positiveN - matrix[i][j] - matrix[i][tot + 1] < -eps) {
                         stepRightButton(currentRow, currentCol);
                         //	System.out.println(positiveN + " " + negativeN + " " + Matrix[i][tot + 1] + " find1");
                         return true;
                     }
                     // let it be 1, find it can not be 1, so it must be 0
-                    if (Matrix[i][j] + negativeN - Matrix[i][tot + 1] > eps) {
+                    if (matrix[i][j] + negativeN - matrix[i][tot + 1] > eps) {
                         stepLeftButton(currentRow, currentCol);
                         //	System.out.println(positiveN + " " + negativeN + " " + Matrix[i][tot + 1] + " find2");
                         return true;
                     }
                 }
-                if (Matrix[i][j] < -eps) {
+                if (matrix[i][j] < -eps) {
                     // let it be 0, find it can not be 0, so it must be 1
-                    if (negativeN - Matrix[i][j] - Matrix[i][tot + 1] > eps) {
+                    if (negativeN - matrix[i][j] - matrix[i][tot + 1] > eps) {
                         stepRightButton(currentRow, currentCol);
                         //	System.out.println(positiveN + " " + negativeN + " " + Matrix[i][tot + 1] + " find3");
                         return true;
                     }
                     // let it be 1, find it can not be 1, so it must be 0
-                    if (Matrix[i][j] + positiveN - Matrix[i][tot + 1] < -eps) {
-                        stepLeftButton(currentRow, currentRow);
+                    if (matrix[i][j] + positiveN - matrix[i][tot + 1] < -eps) {
+                        stepLeftButton(currentRow, currentCol);
                         //	System.out.println(positiveN + " " + negativeN + " " + Matrix[i][tot + 1] + " find4");
                         return true;
                     }
@@ -260,21 +256,43 @@ public class RobotPlayer{
     }
 
     private void randomPick() {
-        Random blockCreator = new Random();
+        int count = 0;
+        for (int x = 1; x <= xDim; x++) {
+            for (int y = 1; y <= yDim; y++) {
+                if (currentArray[x][y] == Station.unknown) {
+                    System.out.println("i + j :" + x + " " + y);
+                    stepLeftButton(x, y);
+                    return;
+                }
+                if (currentArray[x][y] == Station.mine) {
+                    count ++;
+                }
+            }
+        }
+        System.out.println("Count" + count);
+
+        // System.out.println("Wrong!");
+
+        /*Random blockCreator = new Random();
         int newX, newY;
         while (true) {
-            newX = blockCreator.nextInt(X) + 1;
-            newY = blockCreator.nextInt(Y) + 1;
+
+            newX = blockCreator.nextInt(xDim) + 1;
+            newY = blockCreator.nextInt(yDim) + 1;
             if (currentArray[newX][newY] == Station.unknown) {
                 stepLeftButton(newX, newY);
                 break;
             }
-        }
+        }*/
     }
 
+    /**
+     * 直接判断
+     * @return
+     */
     private boolean bruteForce() {
-        for (int i = 1; i <= X; ++i) {
-            for (int j = 1; j <= Y; ++j) {
+        for (int i = 1; i <= xDim; ++i) {
+            for (int j = 1; j <= yDim; ++j) {
                 // todo 这是做什么判断？？？？已经 试探过的格子不用 tryClick？
                 if (currentArray[i][j] == Station.unknown
                         || currentArray[i][j] == Station.mine
@@ -300,22 +318,22 @@ public class RobotPlayer{
         if (x - 1 >= 1) {
             query(x - 1, y);
         }
-        if (x - 1 >= 1 && y + 1 <= Y) {
+        if (x - 1 >= 1 && y + 1 <= yDim) {
             query(x - 1, y + 1);
         }
         if (y - 1 >= 1) {
             query(x, y - 1);
         }
-        if (y + 1 <= Y) {
+        if (y + 1 <= yDim) {
             query(x, y + 1);
         }
-        if (x + 1 <= X && y - 1 >= 1) {
+        if (x + 1 <= xDim && y - 1 >= 1) {
             query(x + 1, y - 1);
         }
-        if (x + 1 <= X) {
+        if (x + 1 <= xDim) {
             query(x + 1, y);
         }
-        if (x + 1 <= X && y + 1 <= Y) {
+        if (x + 1 <= xDim && y + 1 <= yDim) {
             query(x + 1, y + 1);
         }
         if (blankAreaAround == 0) {
@@ -397,7 +415,7 @@ public class RobotPlayer{
     }
 
     private boolean canClick(int x, int y) {
-        if (x >= 1 && y >= 1 && x <= X && y <= Y) {
+        if (x >= 1 && y >= 1 && x <= xDim && y <= yDim) {
             if (currentArray[x][y] == Station.unknown) {
                 return true;
             }
@@ -413,11 +431,21 @@ public class RobotPlayer{
         }
     }
 
-    private void stepLeftButton(int x, int y) {
+    public void stepLeftButton(int x, int y) {
+        flushCurrentState();
+        leftButtonEvent(x, y);
+    }
+
+    public void stepRightButton(int x, int y) {
+        flushCurrentState();
+        rightButtonEvent(x, y);
+    }
+
+    public void leftButtonEvent(int x, int y) {
         MineWindow.getInstance().minePanel.solveLeftButtonEvents(x, y);
     }
 
-    private void stepRightButton(int x, int y) {
+    public void rightButtonEvent(int x, int y) {
         MineWindow.getInstance().minePanel.solveRightButtonEvents(x, y);
     }
 

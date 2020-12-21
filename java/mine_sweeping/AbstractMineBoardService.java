@@ -9,22 +9,27 @@ import util.Station;
  *
  * @author 10652
  */
-public abstract class MineBoardService extends MineBoard {
+public abstract class AbstractMineBoardService extends MineBoard {
     private static final long serialVersionUID = 315256889121532853L;
-    int blockNum;
-    boolean play;
-    Station[][] currentArr;
-    static boolean result;
+    protected boolean play;
+    protected Station[][] currentArr;
+    protected boolean firstStep;
+    protected boolean result;
+
+    public boolean getResult() {
+        return result;
+    }
 
     /**
      * @param x
      * @param y
      * @param n
      */
-    MineBoardService(int x, int y, int n) {
+    public AbstractMineBoardService(int x, int y, int n) {
         super(x, y, n);
         this.currentArr = new Station[x + 1][y + 1];
         this.play = true;
+        this.firstStep = true;
 
         for (int i = 1; i <= x; ++i) {
             for (int j = 1; j <= y; ++j) {
@@ -34,12 +39,29 @@ public abstract class MineBoardService extends MineBoard {
     }
 
     /**
+     * 遵循 windows xp 扫雷规则
+     *
+     * @param x
+     * @param y
+     */
+    public void firstStep(int x, int y) {
+        firstStep = false;
+        rePutMine(x, y);
+        boardArray[x][y] = Station.unknown;
+        calculateAroundMine(false);
+        firstStepChangeFace();
+    }
+
+    /**
      * 左键
      *
      * @param x
      * @param y
      */
     public void stepByLeftButton(int x, int y) {
+        if (firstStep && boardArray[x][y] == Station.mine) {
+            firstStep(x, y);
+        }
         // 是否踩雷
         if (boardArray[x][y] != Station.mine) {
             // 没有踩雷：显示标签
@@ -48,7 +70,7 @@ public abstract class MineBoardService extends MineBoard {
                 // 如果周围无雷，则显示周围无雷区域
                 dfs(x, y);
             } else {
-                // 标记
+                // 记录当前格子
                 currentArr[x][y] = boardArray[x][y];
             }
             // 每查看一个格子，都需要检查是否扫雷结束
@@ -56,69 +78,8 @@ public abstract class MineBoardService extends MineBoard {
         } else {
             System.out.println("loser");
             result = false;
-            gameOver();
-        }
-    }
-
-    /**
-     * 检查是否扫雷结束
-     *
-     * @return 查过的格子数
-     */
-    private int check() {
-        int currentVisited = 0;
-        for (int i = 1; i <= x; ++i) {
-            for (int j = 1; j <= y; ++j) {
-                if (currentArr[i][j] != Station.unknown && currentArr[i][j] != Station.mine) {
-                    currentVisited++;
-                }
-            }
-        }
-        if (currentVisited == x * y - blockNum) {
-            System.out.println("you win");
-            result = true;
             this.play = false;
-        }
-        return currentVisited;
-    }
-
-    public void dfsStep(int x, int y) {
-        if (currentArr[x][y] != Station.unknown) {
-            return;
-        }
-        showLabelIcon(x, y);
-        if (boardArray[x][y] == Station.zero) {
-            dfs(x, y);
-        } else {
-            currentArr[x][y] = boardArray[x][y];
-        }
-    }
-
-    public void dfs(int x, int y) {
-        currentArr[x][y] = boardArray[x][y];
-        if (x - 1 >= 1 && y - 1 >= 1) {
-            dfsStep(x - 1, y - 1);
-        }
-        if (x - 1 >= 1) {
-            dfsStep(x - 1, y);
-        }
-        if (x - 1 >= 1 && y + 1 <= this.y) {
-            dfsStep(x - 1, y + 1);
-        }
-        if (y - 1 >= 1) {
-            dfsStep(x, y - 1);
-        }
-        if (y + 1 <= this.y) {
-            dfsStep(x, y + 1);
-        }
-        if (x + 1 <= this.x && y - 1 >= 1) {
-            dfsStep(x + 1, y - 1);
-        }
-        if (x + 1 <= this.x) {
-            dfsStep(x + 1, y);
-        }
-        if (x + 1 <= this.x && y + 1 <= this.y) {
-            dfsStep(x + 1, y + 1);
+            gameOver();
         }
     }
 
@@ -141,10 +102,92 @@ public abstract class MineBoardService extends MineBoard {
     }
 
     /**
+     * 检查是否扫雷结束
+     *
+     * @return 查过的格子数
+     */
+    private int check() {
+        int currentVisited = 0;
+        int count = 0;
+        for (int i = 1; i <= xDim; ++i) {
+            for (int j = 1; j <= yDim; ++j) {
+                if (currentArr[i][j] != Station.unknown && currentArr[i][j] != Station.mine) {
+                    currentVisited++;
+                }
+                if (currentArr[i][j] == Station.mine) {
+                    count++;
+                }
+            }
+        }
+        System.out.println("check currentVisited : " + currentVisited + " / " + count + " / " + getCount());
+        if (currentVisited == xDim * yDim - blockNum) {
+            System.out.println("you win");
+            result = true;
+            this.play = false;
+        }
+        return currentVisited;
+    }
+
+    /**
+     * 打开当前格子，并判断当前格子的周围是否无雷！
+     * 注意：当前格子一定无雷！！！
+     *
+     * @param x
+     * @param y
+     */
+    public void dfsStep(int x, int y) {
+        if (currentArr[x][y].getValue() >= 0) {
+            // 减枝：避免相互之间 dfs，还未 dfs 探测过的格子，可能是 unknown、可能被 mine（标记成 雷）
+            // 其余情况一定都已经探测过！
+            return;
+        }
+        // 无论当前格子是否被标记，都直接显示，因为当前格子一定无雷！
+        currentArr[x][y] = boardArray[x][y];
+        showLabelIcon(x, y);
+        if (boardArray[x][y] == Station.zero) {
+            dfs(x, y);
+        }
+    }
+
+    /**
+     * 仅当 x、y 对应的格子周围无雷，才进入 dfs 方法
+     * 打开当前格子的周围
+     *
+     * @param x
+     * @param y
+     */
+    public void dfs(int x, int y) {
+        currentArr[x][y] = boardArray[x][y];
+        if (x - 1 >= 1 && y - 1 >= 1) {
+            dfsStep(x - 1, y - 1);
+        }
+        if (x - 1 >= 1) {
+            dfsStep(x - 1, y);
+        }
+        if (x - 1 >= 1 && y + 1 <= this.yDim) {
+            dfsStep(x - 1, y + 1);
+        }
+        if (y - 1 >= 1) {
+            dfsStep(x, y - 1);
+        }
+        if (y + 1 <= this.yDim) {
+            dfsStep(x, y + 1);
+        }
+        if (x + 1 <= this.xDim && y - 1 >= 1) {
+            dfsStep(x + 1, y - 1);
+        }
+        if (x + 1 <= this.xDim) {
+            dfsStep(x + 1, y);
+        }
+        if (x + 1 <= this.xDim && y + 1 <= this.yDim) {
+            dfsStep(x + 1, y + 1);
+        }
+    }
+
+    /**
      * 显示画面：游戏结束
      */
     public void gameOver() {
-        this.play = false;
         showGameOver();
     }
 
@@ -157,27 +200,32 @@ public abstract class MineBoardService extends MineBoard {
     }
 
     /**
+     * 抽象方法：交由子类修改图形界面
+     */
+    protected abstract void firstStepChangeFace();
+
+    /**
      * 显示画面：按钮
      */
-    abstract void showButtonIcon(int x, int y);
+    public abstract void showButtonIcon(int x, int y);
 
     /**
      * 显示画面：标签
      */
-    abstract void showLabelIcon(int x, int y);
+    public abstract void showLabelIcon(int x, int y);
 
     /**
      * 显示画面：标记
      */
-    abstract void showFlagIcon(int x, int y);
+    public abstract void showFlagIcon(int x, int y);
 
     /**
      * 显示画面：正确标记
      */
-    abstract void showCorrectFlagIcon(int x, int y);
+    public abstract void showCorrectFlagIcon(int x, int y);
 
     /**
      * 显示画面：游戏结束
      */
-    abstract void showGameOver();
+    public abstract void showGameOver();
 }
