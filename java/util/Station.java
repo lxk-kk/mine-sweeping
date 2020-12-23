@@ -15,7 +15,9 @@ public enum Station {
     seven(7, "7"),
     eight(8, "8"),
     mine(-1, "M"),
-    unknown(-2, "N");
+    unknown(-2, "N"),
+    flag(-3, "F"),
+    ;
     private int value;
     private String text;
 

@@ -26,7 +26,7 @@ public class MineBoard extends JPanel {
         createBoard();
     }
 
-    public int getCount() {
+    public int getMineCount() {
         int count = 0;
         for (int i = 1; i <= xDim; i++) {
             for (int j = 1; j <= yDim; j++) {
@@ -147,6 +147,6 @@ public class MineBoard extends JPanel {
                 }
             }
         }
-        System.out.println("count ------------- " + count);
+        // System.out.println("count ------------- " + count);
     }
 }

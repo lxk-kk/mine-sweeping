@@ -236,9 +236,9 @@ public class MinePanelService extends AbstractMineBoardService {
         for (int x = 1; x <= xDim; ++x) {
             for (int y = 1; y <= yDim; ++y) {
                 // 标记成功：显示标记结果！
-                if (boardArray[x][y] == Station.mine && currentArr[x][y] == Station.mine) {
+                if (boardArray[x][y] == Station.mine && currentArr[x][y] == Station.flag) {
                     showCorrectFlagIcon(x, y);
-                } else if (boardArray[x][y] == Station.mine && currentArr[x][y] != Station.mine) {
+                } else if (boardArray[x][y] == Station.mine && currentArr[x][y] != Station.flag) {
                     showLabelIcon(x, y);
                 }
                 buttonArr[x][y].setEnabled(false);

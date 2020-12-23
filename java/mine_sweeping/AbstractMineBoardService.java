@@ -44,7 +44,7 @@ public abstract class AbstractMineBoardService extends MineBoard {
      * @param x
      * @param y
      */
-    public void firstStep(int x, int y) {
+    public void firstStepMine(int x, int y) {
         firstStep = false;
         rePutMine(x, y);
         boardArray[x][y] = Station.unknown;
@@ -59,8 +59,11 @@ public abstract class AbstractMineBoardService extends MineBoard {
      * @param y
      */
     public void stepByLeftButton(int x, int y) {
-        if (firstStep && boardArray[x][y] == Station.mine) {
-            firstStep(x, y);
+        if (firstStep) {
+            firstStep = false;
+            if (boardArray[x][y] == Station.mine) {
+                firstStepMine(x, y);
+            }
         }
         // 是否踩雷
         if (boardArray[x][y] != Station.mine) {
@@ -76,7 +79,8 @@ public abstract class AbstractMineBoardService extends MineBoard {
             // 每查看一个格子，都需要检查是否扫雷结束
             check();
         } else {
-            System.out.println("loser");
+            // 否则：踩雷，游戏结束！
+            // System.out.println("loser");
             result = false;
             this.play = false;
             gameOver();
@@ -90,13 +94,13 @@ public abstract class AbstractMineBoardService extends MineBoard {
      * @param y
      */
     public void stepByRightButton(int x, int y) {
-        if (currentArr[x][y] == Station.mine) {
+        if (currentArr[x][y] == Station.flag) {
             // 二次点击：恢复成按钮图标！
             currentArr[x][y] = Station.unknown;
             showButtonIcon(x, y);
         } else {
             // 第一次点击：标记小红旗图标！
-            currentArr[x][y] = Station.mine;
+            currentArr[x][y] = Station.flag;
             showFlagIcon(x, y);
         }
     }
@@ -111,17 +115,18 @@ public abstract class AbstractMineBoardService extends MineBoard {
         int count = 0;
         for (int i = 1; i <= xDim; ++i) {
             for (int j = 1; j <= yDim; ++j) {
-                if (currentArr[i][j] != Station.unknown && currentArr[i][j] != Station.mine) {
+                // 当前格子没有访问，且当前格子不是标记！
+                if (currentArr[i][j].getValue() >= Station.zero.getValue()) {
                     currentVisited++;
                 }
-                if (currentArr[i][j] == Station.mine) {
+                if (currentArr[i][j] == Station.flag) {
                     count++;
                 }
             }
         }
-        System.out.println("check currentVisited : " + currentVisited + " / " + count + " / " + getCount());
+        // System.out.println("check currentVisited : " + currentVisited + " / " + count + " / " + getMineCount());
         if (currentVisited == xDim * yDim - blockNum) {
-            System.out.println("you win");
+            // System.out.println("you win");
             result = true;
             this.play = false;
         }
@@ -136,8 +141,8 @@ public abstract class AbstractMineBoardService extends MineBoard {
      * @param y
      */
     public void dfsStep(int x, int y) {
-        if (currentArr[x][y].getValue() >= 0) {
-            // 减枝：避免相互之间 dfs，还未 dfs 探测过的格子，可能是 unknown、可能被 mine（标记成 雷）
+        if (currentArr[x][y].getValue() >= Station.zero.getValue()) {
+            // 减枝：避免相互之间 dfs，还未 dfs 探测过的格子，可能是 unknown、可能被 flag（标记成 雷）
             // 其余情况一定都已经探测过！
             return;
         }
@@ -205,7 +210,7 @@ public abstract class AbstractMineBoardService extends MineBoard {
     protected abstract void firstStepChangeFace();
 
     /**
-     * 显示画面：按钮
+     *
      */
     public abstract void showButtonIcon(int x, int y);
 

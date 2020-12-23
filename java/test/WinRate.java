@@ -11,6 +11,12 @@ public class WinRate {
     static int step;
 
     public static void main(String[] args) {
+        while (true) {
+            test();
+        }
+    }
+
+    public static void test() {
         System.out.println("测试次数：");
         Scanner in = new Scanner(System.in);
         step = in.nextInt();

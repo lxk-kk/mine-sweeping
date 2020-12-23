@@ -13,9 +13,9 @@ public class RobotPlayer {
     public Station[][] currentArray;
     private static int xDim;
     private static int yDim;
-    private int blockAround;
+    private int mineAround;
     private int blankAreaAround;
-    private int blockFoundAround;
+    private int mineFoundAround;
     private static final double eps = 1e-10;
 
     public RobotPlayer(int xDim, int yDim) {
@@ -70,19 +70,19 @@ public class RobotPlayer {
         int currentCol;
         for (int x = 1; x <= xDim; ++x) {
             for (int y = 1; y <= yDim; ++y) {
-                if (currentArray[x][y] == Station.mine || currentArray[x][y] == Station.unknown || currentArray[x][y] == Station.zero) {
+                // todo 当前格子被标记、当前格子被查看且周围无雷 等情况都不计算！
+                if (currentArray[x][y].getValue() <= 0) {
                     continue;
                 }
                 currentRow = (x - 1) * yDim + y;
-                // getBlockAround(i, j); 使用下面这句代替
-                blockAround = currentArray[x][y].getValue();
+                mineAround = currentArray[x][y].getValue();
                 if (x > 1 && y > 1) {
                     if (currentArray[x - 1][y - 1] == Station.unknown) {
                         currentCol = (x - 2) * yDim + y - 1;
                         matrix[currentRow][currentCol] = 1.0;
                     }
-                    if (currentArray[x - 1][y - 1] == Station.mine) {
-                        blockAround--;
+                    if (currentArray[x - 1][y - 1] == Station.flag) {
+                        mineAround--;
                     }
                 }
                 if (x > 1) {
@@ -90,8 +90,8 @@ public class RobotPlayer {
                         currentCol = (x - 2) * yDim + y;
                         matrix[currentRow][currentCol] = 1.0;
                     }
-                    if (currentArray[x - 1][y] == Station.mine) {
-                        blockAround--;
+                    if (currentArray[x - 1][y] == Station.flag) {
+                        mineAround--;
                     }
                 }
                 if (x > 1 && y < yDim) {
@@ -99,8 +99,8 @@ public class RobotPlayer {
                         currentCol = (x - 2) * yDim + y + 1;
                         matrix[currentRow][currentCol] = 1.0;
                     }
-                    if (currentArray[x - 1][y + 1] == Station.mine) {
-                        blockAround--;
+                    if (currentArray[x - 1][y + 1] == Station.flag) {
+                        mineAround--;
                     }
                 }
                 if (y > 1) {
@@ -108,8 +108,8 @@ public class RobotPlayer {
                         currentCol = (x - 1) * yDim + y - 1;
                         matrix[currentRow][currentCol] = 1.0;
                     }
-                    if (currentArray[x][y - 1] == Station.mine) {
-                        blockAround--;
+                    if (currentArray[x][y - 1] == Station.flag) {
+                        mineAround--;
                     }
                 }
                 if (y < yDim) {
@@ -117,8 +117,8 @@ public class RobotPlayer {
                         currentCol = (x - 1) * yDim + y + 1;
                         matrix[currentRow][currentCol] = 1.0;
                     }
-                    if (currentArray[x][y + 1] == Station.mine) {
-                        blockAround--;
+                    if (currentArray[x][y + 1] == Station.flag) {
+                        mineAround--;
                     }
                 }
                 if (x < xDim && y > 1) {
@@ -126,8 +126,8 @@ public class RobotPlayer {
                         currentCol = x * yDim + y - 1;
                         matrix[currentRow][currentCol] = 1.0;
                     }
-                    if (currentArray[x + 1][y - 1] == Station.mine) {
-                        blockAround--;
+                    if (currentArray[x + 1][y - 1] == Station.flag) {
+                        mineAround--;
                     }
                 }
                 if (x < xDim) {
@@ -135,8 +135,8 @@ public class RobotPlayer {
                         currentCol = x * yDim + y;
                         matrix[currentRow][currentCol] = 1.0;
                     }
-                    if (currentArray[x + 1][y] == Station.mine) {
-                        blockAround--;
+                    if (currentArray[x + 1][y] == Station.flag) {
+                        mineAround--;
                     }
                 }
                 if (x < xDim && y < yDim) {
@@ -144,11 +144,11 @@ public class RobotPlayer {
                         currentCol = x * yDim + y + 1;
                         matrix[currentRow][currentCol] = 1.0;
                     }
-                    if (currentArray[x + 1][y + 1] == Station.mine) {
-                        blockAround--;
+                    if (currentArray[x + 1][y + 1] == Station.flag) {
+                        mineAround--;
                     }
                 }
-                matrix[currentRow][tot + 1] = (double) blockAround;
+                matrix[currentRow][tot + 1] = (double) mineAround;
             }
         }
         int cur, pos = 1;
@@ -256,7 +256,7 @@ public class RobotPlayer {
     }
 
     private void randomPick() {
-        int count = 0;
+        /*int count = 0;
         for (int x = 1; x <= xDim; x++) {
             for (int y = 1; y <= yDim; y++) {
                 if (currentArray[x][y] == Station.unknown) {
@@ -264,16 +264,16 @@ public class RobotPlayer {
                     stepLeftButton(x, y);
                     return;
                 }
-                if (currentArray[x][y] == Station.mine) {
-                    count ++;
+                if (currentArray[x][y] == Station.flag) {
+                    count++;
                 }
             }
         }
-        System.out.println("Count" + count);
+        System.out.println("Count" + count);*/
 
         // System.out.println("Wrong!");
 
-        /*Random blockCreator = new Random();
+        Random blockCreator = new Random();
         int newX, newY;
         while (true) {
 
@@ -283,23 +283,19 @@ public class RobotPlayer {
                 stepLeftButton(newX, newY);
                 break;
             }
-        }*/
+        }
     }
 
     /**
      * 直接判断
+     *
      * @return
      */
     private boolean bruteForce() {
         for (int i = 1; i <= xDim; ++i) {
             for (int j = 1; j <= yDim; ++j) {
-                // todo 这是做什么判断？？？？已经 试探过的格子不用 tryClick？
-                if (currentArray[i][j] == Station.unknown
-                        || currentArray[i][j] == Station.mine
-                        || currentArray[i][j] == Station.zero) {
-                    continue;
-                }
-                if (tryClick(i, j)) {
+                // 当前格子已经访问，且周围有雷，则尝试点击！
+                if (currentArray[i][j].getValue() > 0 && tryClick(i, j)) {
                     return true;
                 }
             }
@@ -309,9 +305,9 @@ public class RobotPlayer {
 
     private boolean tryClick(int x, int y) {
         // getBlockAround(i, j); 使用下面这句代替
-        blockAround = currentArray[x][y].getValue();
+        mineAround = currentArray[x][y].getValue();
         blankAreaAround = 0;
-        blockFoundAround = 0;
+        mineFoundAround = 0;
         if (x - 1 >= 1 && y - 1 >= 1) {
             query(x - 1, y - 1);
         }
@@ -341,7 +337,7 @@ public class RobotPlayer {
         }
         // 周围有雷的数量 - 周围找到的雷数量：剩余雷的数量 == 周围找到的未开发区域，说明当前格子一定无雷！
         // 右键处理？？标记？？
-        if (blankAreaAround == blockAround - blockFoundAround) {
+        if (blankAreaAround == mineAround - mineFoundAround) {
             if (canClick(x - 1, y - 1)) {
                 stepRightButton(x - 1, y - 1);
                 return true;
@@ -377,7 +373,7 @@ public class RobotPlayer {
         }
         // 周围雷的数量 == 找到的雷的数量：当前一定无雷！
         // 左键事件处理！
-        if (blockAround == blockFoundAround) {
+        if (mineAround == mineFoundAround) {
             if (canClick(x - 1, y - 1)) {
                 stepLeftButton(x - 1, y - 1);
                 return true;
@@ -426,8 +422,8 @@ public class RobotPlayer {
     private void query(int x, int y) {
         if (currentArray[x][y] == Station.unknown) {
             blankAreaAround++;
-        } else if (currentArray[x][y] == Station.mine) {
-            blockFoundAround++;
+        } else if (currentArray[x][y] == Station.flag) {
+            mineFoundAround++;
         }
     }
 
@@ -452,28 +448,28 @@ public class RobotPlayer {
     private void getBlockAround(int x, int y) {
         switch (currentArray[x][y]) {
             case one:
-                blockAround = 1;
+                mineAround = 1;
                 break;
             case two:
-                blockAround = 2;
+                mineAround = 2;
                 break;
             case three:
-                blockAround = 3;
+                mineAround = 3;
                 break;
             case four:
-                blockAround = 4;
+                mineAround = 4;
                 break;
             case five:
-                blockAround = 5;
+                mineAround = 5;
                 break;
             case six:
-                blockAround = 6;
+                mineAround = 6;
                 break;
             case seven:
-                blockAround = 7;
+                mineAround = 7;
                 break;
             case eight:
-                blockAround = 8;
+                mineAround = 8;
                 break;
             default:
                 System.out.println("Error");
