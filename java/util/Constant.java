@@ -21,7 +21,7 @@ public class Constant {
      * 16 * 16 40
      * 30 * 16 99
      */
-    public static final int X_DIMENSION = 30;
-    public static final int Y_DIMENSION = 16;
+    public static final int X_DIMENSION = 16;
+    public static final int Y_DIMENSION = 30;
     public static final int MINE_TOTAL = 99;
 }
