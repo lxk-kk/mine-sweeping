@@ -46,7 +46,7 @@ public class RobotPlayer {
     /**
      * 自动扫雷策略：
      * 情况 1：根据已知区域，能够准确找到某一格无雷
-     * 情况 2：所有格子无法直接判断，则通过 算法 找出有雷概率最大的格子
+     * 情况 2：所有格子无法直接判断，则通过 解非齐次线性方程组 找出有雷概率最大的格子
      * 情况 3：随意点击一个格子（例如：第一次试探，无雷，且无法判断下一次可试探的格子）
      */
     public void robotPlay() {
@@ -58,214 +58,228 @@ public class RobotPlayer {
         }
     }
 
-    public boolean flushPlayState() {
-        return MineWindow.getInstance().minePanel.isPlaying();
-    }
-
-    public void flushCurrentState() {
-        currentArray = MineWindow.getInstance().minePanel.getCurrentArr();
-    }
-
     /**
-     * 高斯分布求概率
+     * 高斯消元法解多元线性方程组！
+     * 根据多个数字之间的关系来确定空格子是雷还是空，想让这些数字建立起关系的方式就是根据每个数字，将其周围的 8个格子分别设一个未知数。
+     * 如果是雷我们让解为 1，如果是空解就为 0，这样可以连立出一个线性方程组。
+     * 只要解出这个线性方程组，高斯消元，就可以做出决策。
+     * 注意：这里出现多解是很有可能的事，这里有一个不可忽略的条件，任意未知数只能为 0或 1。
      *
      * @return
      */
     private boolean gaussLiner() {
         int tot = xDim * yDim;
         double[][] matrix = new double[tot + 1][tot + 2];
+        createMatrix(tot, matrix);
+        // printMatrix(tot, matrix);
+        matrixReduction(tot, matrix);
+        return solveEquationAndStep(tot, matrix);
+    }
+
+    private void printMatrix(int tot, double[][] matrix) {
+        System.out.println(" -------------------- ");
+        for (int i = 1; i <= tot; i++) {
+            System.out.print("i: " + i + " = ");
+            for (int j = 1; j <= tot + 1; j++) {
+                System.out.print(matrix[i][j] + " ");
+            }
+            System.out.println();
+        }
+        System.out.println(" -------------------- ");
+    }
+
+    /**
+     * 生成线性方程组：AX=Y
+     * 矩阵 A 中，元素 a = 1，表示 unknown 格子
+     * 矩阵 X 中，元素 x = 1，则表示该格子有雷
+     * 向量 Y 中，元素 y 表示，第 i 个格子周围的剩余雷数
+     *
+     * @param tot
+     * @param matrix
+     */
+    private void createMatrix(int tot, double[][] matrix) {
         for (int i = 1; i <= tot; ++i) {
             for (int j = 1; j <= tot + 1; ++j) {
-                matrix[i][j] = 0.0;
+                matrix[i][j] = 0;
             }
         }
-        int currentRow;
-        int currentCol;
+        int matrixRow;
         for (int x = 1; x <= xDim; ++x) {
             for (int y = 1; y <= yDim; ++y) {
-                // todo 当前格子被标记、当前格子被查看且周围无雷 等情况都不计算！
-                if (currentArray[x][y].getValue() <= 0) {
+                // 保证当前格子周围一定有雷！
+                if ((mineAround = currentArray[x][y].getValue()) <= 0) {
                     continue;
                 }
-                // 当前格子周围一定有雷！
-
-                // todo currentRow 代表某一格具体的格子，它只是 矩阵中的 row
-                // todo currentCol 代表 currentRow 格子周围的 8 个具体的格子，它只是 矩阵中的 col
-                currentRow = (x - 1) * yDim + y;
-                mineAround = currentArray[x][y].getValue();
+                matrixRow = (x - 1) * yDim + y;
                 // 左上角！
                 if (x > 1 && y > 1) {
-                    if (currentArray[x - 1][y - 1] == Station.unknown) {
-                        currentCol = (x - 2) * yDim + y - 1;
-                        // todo ? 为什么表示成 1.0
-                        matrix[currentRow][currentCol] = 1.0;
-                    } else if (currentArray[x - 1][y - 1] == Station.flag) {
-                        mineAround--;
-                    }
+                    matrixAssignment(x - 1, y - 1, matrixRow, matrix);
                 }
                 // 正上方
                 if (x > 1) {
-                    if (currentArray[x - 1][y] == Station.unknown) {
-                        currentCol = (x - 2) * yDim + y;
-                        matrix[currentRow][currentCol] = 1.0;
-                    } else if (currentArray[x - 1][y] == Station.flag) {
-                        mineAround--;
-                    }
+                    matrixAssignment(x - 1, y, matrixRow, matrix);
                 }
                 // 右上角
                 if (x > 1 && y < yDim) {
-                    if (currentArray[x - 1][y + 1] == Station.unknown) {
-                        currentCol = (x - 2) * yDim + y + 1;
-                        matrix[currentRow][currentCol] = 1.0;
-                    } else if (currentArray[x - 1][y + 1] == Station.flag) {
-                        mineAround--;
-                    }
+                    matrixAssignment(x - 1, y + 1, matrixRow, matrix);
                 }
-                // 坐边
+                // 左边
                 if (y > 1) {
-                    if (currentArray[x][y - 1] == Station.unknown) {
-                        currentCol = (x - 1) * yDim + y - 1;
-                        matrix[currentRow][currentCol] = 1.0;
-                    } else if (currentArray[x][y - 1] == Station.flag) {
-                        mineAround--;
-                    }
+                    matrixAssignment(x, y - 1, matrixRow, matrix);
                 }
                 // 右边
                 if (y < yDim) {
-                    if (currentArray[x][y + 1] == Station.unknown) {
-                        currentCol = (x - 1) * yDim + y + 1;
-                        matrix[currentRow][currentCol] = 1.0;
-                    } else if (currentArray[x][y + 1] == Station.flag) {
-                        mineAround--;
-                    }
+                    matrixAssignment(x, y + 1, matrixRow, matrix);
                 }
                 // 左下角
                 if (x < xDim && y > 1) {
-                    if (currentArray[x + 1][y - 1] == Station.unknown) {
-                        currentCol = x * yDim + y - 1;
-                        matrix[currentRow][currentCol] = 1.0;
-                    } else if (currentArray[x + 1][y - 1] == Station.flag) {
-                        mineAround--;
-                    }
+                    matrixAssignment(x + 1, y - 1, matrixRow, matrix);
                 }
                 // 正下方
                 if (x < xDim) {
-                    if (currentArray[x + 1][y] == Station.unknown) {
-                        currentCol = x * yDim + y;
-                        matrix[currentRow][currentCol] = 1.0;
-                    } else if (currentArray[x + 1][y] == Station.flag) {
-                        mineAround--;
-                    }
+                    matrixAssignment(x + 1, y, matrixRow, matrix);
                 }
                 // 右下角
                 if (x < xDim && y < yDim) {
-                    if (currentArray[x + 1][y + 1] == Station.unknown) {
-                        currentCol = x * yDim + y + 1;
-                        matrix[currentRow][currentCol] = 1.0;
-                    } else if (currentArray[x + 1][y + 1] == Station.flag) {
-                        mineAround--;
-                    }
+                    matrixAssignment(x + 1, y + 1, matrixRow, matrix);
                 }
-                // 将当前格子周围还剩余的雷数保存！
-                matrix[currentRow][tot + 1] = mineAround;
+                // 将当前格子周围还剩余的雷数保存，作为 Y 向量
+                matrix[matrixRow][tot + 1] = mineAround;
             }
         }
-        int cur, pos = 1;
-        for (int i = 1; i <= tot; ++i) {
-            for (int j = pos; j <= tot; ++j) {
-                if (Math.abs(matrix[j][i]) > eps) {
-                    for (int k = i; k <= tot + 1; ++k) {
-                        double tmp = matrix[j][k];
-                        matrix[j][k] = matrix[pos][k];
-                        matrix[pos][k] = tmp;
+    }
+
+    /**
+     * 根据 currentArray 中当前格子的状态，对矩阵赋值
+     * 若当前格子为 unknown，则矩阵对应元素赋值为 1，表示该格子对应的 x 系数为 1
+     * 若当前格子为 flag，则对应的 Y 的值减一，表示周围未知雷数减一
+     *
+     * @param x
+     * @param y
+     * @param matrixRow
+     * @param matrix
+     */
+    private void matrixAssignment(int x, int y, int matrixRow, double[][] matrix) {
+        if (currentArray[x][y] == Station.unknown) {
+            int matrixCol = (x - 1) * yDim + y;
+            matrix[matrixRow][matrixCol] = 1.0;
+        } else if (currentArray[x][y] == Station.flag) {
+            mineAround--;
+        }
+    }
+
+    /**
+     * 矩阵行列式初等变换（行变换）化简行列式。
+     *
+     * @param tot
+     * @param matrix
+     */
+    private void matrixReduction(int tot, double[][] matrix) {
+        int targetRow = 1;
+        /*
+            从第 1 列开始，若第 col 列中的元素存在 1，则以该 1 所在行为基准做初等行变换
+            保证该列只有 1 个元素有值，其余都为 0，然后将 该元素所在行 放置到 targetRow 指定的行（形成上三角）！
+        */
+        for (int col = 1; col <= tot; ++col) {
+
+            // ------------------------------------------
+            // 两层循环：找到第 col 列中第一个不为 0 的元素，并将该元素所在行交换到 targetRow 指定的行
+            for (int row = targetRow; row <= tot; ++row) {
+                if (Math.abs(matrix[row][col]) > eps) {
+                    // 从第 col 列开始交换，因为，col 列之前的元素全为 0，没必要
+                    for (int c = col; c <= tot + 1; ++c) {
+                        double tmp = matrix[row][c];
+                        matrix[row][c] = matrix[targetRow][c];
+                        matrix[targetRow][c] = tmp;
                     }
+                    // 找到并交换后，便退出该过程！
                     break;
                 }
             }
-            if (Math.abs(matrix[pos][i]) < eps) {
-                //		pos++;
+
+            // ------------------------------------------
+            // 如果第 col 列中，元素全为 0，则直接下一列！
+            if (Math.abs(matrix[targetRow][col]) < eps) {
                 continue;
             }
-            for (int j = 1; j <= tot; ++j) {
-                if (j != pos && Math.abs(matrix[j][i]) > eps) {
-                    double tmp = matrix[j][i] / matrix[pos][i];
-                    for (int k = i; k <= tot + 1; ++k) {
-                        matrix[j][k] -= tmp * matrix[pos][k];
+
+            // ------------------------------------------
+            /*
+                以第 targetRow 行为基准，行变换消去第 col 列上的非零元素！
+                todo
+                  row 从第 1 行开始，但是列元素消零时，是从第 col 列开始的
+                  这么说，第 1 行到第 targetRow 行的前 col 列都不会改变，不合理啊！
+             */
+            for (int row = 1; row <= tot; ++row) {
+                if (row != targetRow && Math.abs(matrix[row][col]) > eps) {
+                    double tmp = matrix[row][col] / matrix[targetRow][col];
+                    for (int c = col; c <= tot + 1; ++c) {
+                        matrix[row][c] -= tmp * matrix[targetRow][c];
                     }
                 }
             }
-            pos++;
+            targetRow++;
         }
-        for (int i = 1; i <= tot; ++i) {
-            cur = 0;
-            for (int j = 1; j <= tot; ++j) {
-                if (Math.abs(matrix[i][j]) > eps) {
-                    cur++;
-                    pos = j;
-                }
-            }
-            //find an answer
-//			if(cur == 1) {
-//				System.out.println("find");
-//				currentRow = pos / yDim + 1;
-//				currentCol = pos % yDim;
-//				if(currentCol == 0) {
-//					currentRow--;
-//					currentCol = yDim;
-//				}
-//				if(Math.abs(Matrix[i][tot + 1] - Matrix[i][pos]) < eps) {
-//                  stepRightButton(currentRow, currentCol);
-//					return true;
-//				}
-//				else if(Math.abs(Matrix[i][tot + 1]) < eps){
-//                  stepLeftButton(currentRow, currentCol);
-//					return true;
-//				}
-//			}
+    }
 
-            //That answer should be either 0 or 1 can be used to find answer
+    /**
+     * 解多元线性方程组，找出确定解，并标记或打开相应格子
+     * 方程组的解，要么是 1 要么是 0
+     * 1：表示当前格子有雷
+     * 0：表示当前格子无雷
+     *
+     * @param tot
+     * @param matrix
+     * @return false：没有找到确定解
+     */
+    private boolean solveEquationAndStep(int tot, double[][] matrix) {
+        int x;
+        int y;
+        // 每一行表示，每个格子对所有格子的影响！
+        for (int row = 1; row <= tot; ++row) {
             double positiveN = 0;
             double negativeN = 0;
-            for (int j = 1; j <= tot; ++j) {
-                if (matrix[i][j] > eps) {
-                    positiveN += matrix[i][j];
+
+            // ------------------------------------------
+            // 分别计算第 row行 方程的 正负系数之和！
+            for (int col = 1; col <= tot; ++col) {
+                if (matrix[row][col] > eps) {
+                    positiveN += matrix[row][col];
                 }
-                if (matrix[i][j] < -eps) {
-                    negativeN += matrix[i][j];
+                if (matrix[row][col] < -eps) {
+                    negativeN += matrix[row][col];
                 }
             }
-            for (int j = 1; j <= tot; ++j) {
-                currentRow = j / yDim + 1;
-                currentCol = j % yDim;
-                if (currentCol == 0) {
-                    currentRow--;
-                    currentCol = yDim;
+
+            // ------------------------------------------
+            // 遍历第 row行 的每一列，假设为1或者0，判断解是否合理！
+            for (int col = 1; col <= tot; ++col) {
+                y = (y = col % yDim) == 0 ? yDim : y;
+                x = (col - y) / yDim;
+
+                // unknown 格子系数为正
+                if (matrix[row][col] > eps) {
+                    // 若无雷，则 x 必然为 0，否则必然有雷（右键）！
+                    if (positiveN - matrix[row][col] - matrix[row][tot + 1] < -eps) {
+                        stepRightButton(x, y);
+                        return true;
+                    }
+                    // 若有雷，则 x 必然为 1，否则必然无雷（左键）！
+                    if (matrix[row][col] + negativeN - matrix[row][tot + 1] > eps) {
+                        stepLeftButton(x, y);
+                        return true;
+                    }
                 }
-                if (matrix[i][j] > eps) {
-                    // let it be 0, find it can not be 0, so it must be 1
-                    if (positiveN - matrix[i][j] - matrix[i][tot + 1] < -eps) {
-                        stepRightButton(currentRow, currentCol);
-                        //	System.out.println(positiveN + " " + negativeN + " " + Matrix[i][tot + 1] + " find1");
+                // unknown 格子系数为负
+                if (matrix[row][col] < -eps) {
+                    // 若无雷，则 x 必然为 0，否则必然有雷（右键）！
+                    if (negativeN - matrix[row][col] - matrix[row][tot + 1] > eps) {
+                        stepRightButton(x, y);
                         return true;
                     }
-                    // let it be 1, find it can not be 1, so it must be 0
-                    if (matrix[i][j] + negativeN - matrix[i][tot + 1] > eps) {
-                        stepLeftButton(currentRow, currentCol);
-                        //	System.out.println(positiveN + " " + negativeN + " " + Matrix[i][tot + 1] + " find2");
-                        return true;
-                    }
-                }
-                if (matrix[i][j] < -eps) {
-                    // let it be 0, find it can not be 0, so it must be 1
-                    if (negativeN - matrix[i][j] - matrix[i][tot + 1] > eps) {
-                        stepRightButton(currentRow, currentCol);
-                        //	System.out.println(positiveN + " " + negativeN + " " + Matrix[i][tot + 1] + " find3");
-                        return true;
-                    }
-                    // let it be 1, find it can not be 1, so it must be 0
-                    if (matrix[i][j] + positiveN - matrix[i][tot + 1] < -eps) {
-                        stepLeftButton(currentRow, currentCol);
-                        //	System.out.println(positiveN + " " + negativeN + " " + Matrix[i][tot + 1] + " find4");
+                    // 若有雷，则 x 必然为 1，否则必然无雷（左键）！
+                    if (matrix[row][col] + positiveN - matrix[row][tot + 1] < -eps) {
+                        stepLeftButton(x, y);
                         return true;
                     }
                 }
@@ -318,9 +332,9 @@ public class RobotPlayer {
         } else if (currentArray[xDim][yDim] == Station.unknown) {
             stepLeftButton(xDim, yDim);
             return;
-        } else if(stepOneByProb()){
+        } /*else if (stepOneByProb()) {
             return;
-        }
+        }*/
 
         /*int count = 0;
         for (int x = 1; x <= xDim; x++) {
@@ -548,14 +562,14 @@ public class RobotPlayer {
         // System.out.println(" --------------------------- ");
         for (int x = 1; x <= xDim; x++) {
             for (int y = 1; y <= yDim; y++) {
-               // System.out.print(probMine[x][y] + " ");
+                // System.out.print(probMine[x][y] + " ");
                 if (probMine[x][y] < 49 && probMine[x][y] < prob && Math.abs(probMine[x][y] - prob) < eps2) {
                     xProb = x;
                     yProb = y;
                 }
                 // < 49 表示不包含概率试探不到的 unknown 格子
             }
-           // System.out.println();
+            // System.out.println();
         }
         // System.out.println(xProb + " " + yProb + "  / " + probMine[xProb][yProb] + " / " + count);
 
@@ -656,5 +670,13 @@ public class RobotPlayer {
 
     public void rightButtonEvent(int x, int y) {
         MineWindow.getInstance().minePanel.solveRightButtonEvents(x, y);
+    }
+
+    public boolean flushPlayState() {
+        return MineWindow.getInstance().minePanel.isPlaying();
+    }
+
+    public void flushCurrentState() {
+        currentArray = MineWindow.getInstance().minePanel.getCurrentArr();
     }
 }
