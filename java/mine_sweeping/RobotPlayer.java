@@ -2,6 +2,8 @@ package mine_sweeping;
 
 import util.Station;
 
+import javax.swing.plaf.IconUIResource;
+import java.util.HashMap;
 import java.util.Random;
 
 /**
@@ -53,7 +55,7 @@ public class RobotPlayer {
         flushCurrentState();
         while (flushPlayState()) {
             if (!bruteForce() && !gaussLiner()) {
-                randomPick();
+                experienceStep();
             }
         }
     }
@@ -71,8 +73,11 @@ public class RobotPlayer {
         int tot = xDim * yDim;
         double[][] matrix = new double[tot + 1][tot + 2];
         createMatrix(tot, matrix);
+        // System.out.println("创建矩阵：");
         // printMatrix(tot, matrix);
         matrixReduction(tot, matrix);
+        // System.out.println("矩阵变换：");
+        // printMatrix(tot, matrix);
         return solveEquationAndStep(tot, matrix);
     }
 
@@ -250,12 +255,16 @@ public class RobotPlayer {
                     negativeN += matrix[row][col];
                 }
             }
+            if (positiveN < eps && negativeN > -eps) {
+                // todo 是否所有非零方程都被移到顶部呢？ 结果似乎并不影响！
+                return false;
+            }
 
             // ------------------------------------------
             // 遍历第 row行 的每一列，假设为1或者0，判断解是否合理！
             for (int col = 1; col <= tot; ++col) {
                 y = (y = col % yDim) == 0 ? yDim : y;
-                x = (col - y) / yDim;
+                x = (col - y) / yDim + 1;
 
                 // unknown 格子系数为正
                 if (matrix[row][col] > eps) {
@@ -319,24 +328,118 @@ public class RobotPlayer {
     }
 
 
-    private void randomPick() {
-        if (currentArray[1][1] == Station.unknown) {
-            stepLeftButton(1, 1);
-            return;
-        } else if (currentArray[1][yDim] == Station.unknown) {
-            stepLeftButton(1, yDim);
-            return;
-        } else if (currentArray[xDim][1] == Station.unknown) {
-            stepLeftButton(xDim, 1);
-            return;
-        } else if (currentArray[xDim][yDim] == Station.unknown) {
-            stepLeftButton(xDim, yDim);
-            return;
-        } /*else if (stepOneByProb()) {
-            return;
-        }*/
+    /**
+     * 经验猜
+     */
+    private void experienceStep() {
+        if (!cornerStepTwo()) {
+            // randomStep();
+            fiveSquareStep();
+        }
+    }
 
-        /*int count = 0;
+    private void fiveSquareStep() {
+        int five = 5;
+        // 已知计数
+        int[] knownCount = new int[yDim + 1];
+
+        // 1~5 行，中各列总和
+        for (int x = 1; x <= five; x++) {
+            for (int y = 1; y <= yDim; y++) {
+                if (currentArray[x][y] != Station.unknown) {
+                    knownCount[y]++;
+                }
+            }
+        }
+        int minX = 0, minY = 0;
+        int count = -1;
+        int[] total = new int[yDim - five + 1 + 1];
+        // 1~5 列的总和！
+        for (int i = 1; i <= five; ++i) {
+            total[1] += knownCount[i];
+        }
+        // 初始设置！
+        if (total[1] < 25) {
+            count = total[1];
+            minX = 1;
+            minY = 1;
+        }
+        // total[1] = currentArray[1~5][1~5] 的总和
+
+        // 2~yDim 列中，每五列的总和！
+        for (int y = five + 1; y <= yDim; ++y) {
+            int idy = y - five + 1;
+            total[idy] = total[idy - 1] + knownCount[y] - knownCount[y - five];
+            // 做记录：5 * 5
+            if (total[idy] < 25 && total[idy] > count) {
+                count = total[idy];
+                minX = 1;
+                minY = idy;
+            }
+        }
+
+        //  2~xDim 行，中每 5*5 的总和！
+        for (int x = five + 1; x <= xDim; x++) {
+            // 某一行中，针对每一列更新 knownCount 值
+            for (int y = 1; y <= yDim; y++) {
+                // 两个格子都已知
+                if (currentArray[x][y] != currentArray[x - five][y]
+                        && (currentArray[x][y] == Station.unknown || currentArray[x - five][y] == Station.unknown)) {
+                    // 如果当前已知，则说明 x-five 未知，则已知计数 + 1
+                    if (currentArray[x][y] != Station.unknown) {
+                        knownCount[y]++;
+                    } else {
+                        knownCount[y]--;
+                    }
+                }
+            }
+            total[1] = 0;
+            // 1~5 列的总和！
+            for (int y = 1; y <= five; ++y) {
+                total[1] += knownCount[y];
+            }
+            if (total[1] < 25 && total[1] > count) {
+                count = total[1];
+                minX = x - five + 1;
+                minY = 1;
+            }
+            // 2~yDim 列中，每五列的总和！
+            for (int y = five + 1; y <= yDim; ++y) {
+                int idy = y - five + 1;
+                total[idy] = total[idy - 1] + knownCount[y] - knownCount[y - five];
+                // 做记录：5 * 5
+                if (total[idy] < 25 && total[idy] > count) {
+                    count = total[idy];
+                    minX = x - five + 1;
+                    minY = idy;
+                }
+            }
+            if (count == 24) {
+                // System.out.println(minX + " - " + minY + " - " + count);
+                randomStep(minX, minY, count);
+                return;
+            }
+        }
+        // System.out.println(minX + " - " + minY + " - " + count);
+        randomStep(minX, minY, count);
+    }
+
+    private void randomStep(int xStart, int yStart, int count) {
+        Random blockCreator = new Random();
+        int newX, newY;
+        while (true) {
+            newX = blockCreator.nextInt(5) + xStart ;
+            newY = blockCreator.nextInt(5) + yStart ;
+            // System.out.println(xStart + " " + yStart + " | " + newX + " " + newY + " - " + count);
+            if (currentArray[newX][newY] == Station.unknown) {
+                stepLeftButton(newX, newY);
+                return;
+            }
+        }
+    }
+
+    private void randomStep() {
+        /*
         for (int x = 1; x <= xDim; x++) {
             for (int y = 1; y <= yDim; y++) {
                 if (currentArray[x][y] == Station.unknown) {
@@ -349,10 +452,7 @@ public class RobotPlayer {
                 }
             }
         }
-        System.out.println("Count" + count);*/
-
-        // System.out.println("Wrong!");
-
+        */
         Random blockCreator = new Random();
         int newX, newY;
         while (true) {
@@ -363,6 +463,75 @@ public class RobotPlayer {
                 break;
             }
         }
+    }
+
+    private boolean cornerStepTwo() {
+        if (currentArray[1][1] == Station.unknown) {
+            stepLeftButton(1, 1);
+            return true;
+        } else if (currentArray[1][yDim] == Station.unknown) {
+            stepLeftButton(1, yDim);
+            return true;
+        } else if (currentArray[xDim][1] == Station.unknown) {
+            stepLeftButton(xDim, 1);
+            return true;
+        } else if (currentArray[xDim][yDim] == Station.unknown) {
+            stepLeftButton(xDim, yDim);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * 四角点击！
+     * 1、四个角中一般而言，有 1 个角有雷，因此，如果已经标记了这个角，那么后续三个角都可以认为无雷
+     * 2、如果最早点击了两个角无雷，那么，不再尝试点击角，除非有雷角被标记！
+     *
+     * @return false 不可点击
+     */
+    private boolean cornerStep() {
+        if (currentArray[1][1] == Station.unknown) {
+            stepLeftButton(1, 1);
+            return true;
+        }
+        int[] corner = new int[]{1, xDim, 1, yDim};
+        int unknown = 0;
+        int flag = 0;
+        if (currentArray[1][1] == Station.flag) {
+            flag++;
+        }
+        if (currentArray[1][yDim] == Station.unknown) {
+            unknown++;
+        } else if (currentArray[1][yDim] == Station.flag) {
+            flag++;
+
+        }
+        if (currentArray[xDim][1] == Station.unknown) {
+            unknown++;
+        } else if (currentArray[xDim][1] == Station.flag) {
+            flag++;
+        }
+        if (currentArray[xDim][yDim] == Station.unknown) {
+            unknown++;
+        } else if (currentArray[xDim][yDim] == Station.flag) {
+            flag++;
+        }
+        if (flag == 0 && unknown <= 1 || unknown == 0) {
+            // 角落未发现有雷，但是，已经点开了至少两个角，此时，为了安全起见，不点击
+            // 四个全部发现！
+            return false;
+        }
+        Random random = new Random();
+        int xIdx, yIdx;
+        while (true) {
+            xIdx = random.nextInt(2);
+            yIdx = random.nextInt(2) + 2;
+            if (currentArray[corner[xIdx]][corner[yIdx]] == Station.unknown) {
+                stepLeftButton(corner[xIdx], corner[yIdx]);
+                break;
+            }
+        }
+        return true;
     }
 
     /**
