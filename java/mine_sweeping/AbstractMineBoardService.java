@@ -59,12 +59,12 @@ public abstract class AbstractMineBoardService extends MineBoard {
      * @param y
      */
     public void stepByLeftButton(int x, int y) {
-        /*if (firstStep) {
+        if (firstStep) {
             firstStep = false;
             if (boardArray[x][y] == Station.mine) {
                 firstStepMine(x, y);
             }
-        }*/
+        }
         // 是否踩雷
         if (boardArray[x][y] != Station.mine) {
             // 没有踩雷：显示标签

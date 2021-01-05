@@ -1,9 +1,8 @@
 package mine_sweeping;
 
+import game_face.MineWindow;
 import util.Station;
 
-import javax.swing.plaf.IconUIResource;
-import java.util.HashMap;
 import java.util.Random;
 
 /**
@@ -333,8 +332,8 @@ public class RobotPlayer {
      */
     private void experienceStep() {
         if (!cornerStepTwo()) {
-            // randomStep();
-            fiveSquareStep();
+            // fiveSquareStep();
+            randomStep();
         }
     }
 
@@ -420,16 +419,20 @@ public class RobotPlayer {
                 return;
             }
         }
-        // System.out.println(minX + " - " + minY + " - " + count);
-        randomStep(minX, minY, count);
+        if (count <= 15) {
+            randomStep();
+        } else {
+            // System.out.println(minX + " - " + minY + " - " + count);
+            randomStep(minX, minY, count);
+        }
     }
 
     private void randomStep(int xStart, int yStart, int count) {
         Random blockCreator = new Random();
         int newX, newY;
         while (true) {
-            newX = blockCreator.nextInt(5) + xStart ;
-            newY = blockCreator.nextInt(5) + yStart ;
+            newX = blockCreator.nextInt(5) + xStart;
+            newY = blockCreator.nextInt(5) + yStart;
             // System.out.println(xStart + " " + yStart + " | " + newX + " " + newY + " - " + count);
             if (currentArray[newX][newY] == Station.unknown) {
                 stepLeftButton(newX, newY);
@@ -439,20 +442,6 @@ public class RobotPlayer {
     }
 
     private void randomStep() {
-        /*
-        for (int x = 1; x <= xDim; x++) {
-            for (int y = 1; y <= yDim; y++) {
-                if (currentArray[x][y] == Station.unknown) {
-                    System.out.println("i + j :" + x + " " + y);
-                    stepLeftButton(x, y);
-                    return;
-                }
-                if (currentArray[x][y] == Station.flag) {
-                    count++;
-                }
-            }
-        }
-        */
         Random blockCreator = new Random();
         int newX, newY;
         while (true) {
@@ -834,18 +823,18 @@ public class RobotPlayer {
     }
 
     public void leftButtonEvent(int x, int y) {
-        MineWindow.getInstance().minePanel.solveLeftButtonEvents(x, y);
+        MineWindow.getInstance().getMinePanel().solveLeftButtonEvents(x, y);
     }
 
     public void rightButtonEvent(int x, int y) {
-        MineWindow.getInstance().minePanel.solveRightButtonEvents(x, y);
+        MineWindow.getInstance().getMinePanel().solveRightButtonEvents(x, y);
     }
 
     public boolean flushPlayState() {
-        return MineWindow.getInstance().minePanel.isPlaying();
+        return MineWindow.getInstance().getMinePanel().isPlaying();
     }
 
     public void flushCurrentState() {
-        currentArray = MineWindow.getInstance().minePanel.getCurrentArr();
+        currentArray = MineWindow.getInstance().getMinePanel().getCurrentArr();
     }
 }

@@ -1,4 +1,4 @@
-import mine_sweeping.MineWindow;
+import game_face.MineWindow;
 
 import java.awt.*;
 

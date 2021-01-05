@@ -1,5 +1,6 @@
-package mine_sweeping;
+package game_face;
 
+import mine_sweeping.RobotPlayer;
 import util.Constant;
 
 import javax.swing.*;
@@ -20,6 +21,11 @@ public class MineWindow extends JFrame {
     JButton restartButton;
     JPanel mainWindowPanel;
     JPanel northLayoutPanel;
+
+    public MinePanelService getMinePanel() {
+        return minePanel;
+    }
+
     MinePanelService minePanel;
     JButton robotButton;
 

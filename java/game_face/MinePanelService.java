@@ -1,5 +1,6 @@
-package mine_sweeping;
+package game_face;
 
+import mine_sweeping.AbstractMineBoardService;
 import util.Constant;
 import util.MouseListenerFactory;
 import util.Station;
