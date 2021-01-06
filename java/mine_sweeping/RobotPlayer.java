@@ -332,7 +332,11 @@ public class RobotPlayer {
      */
     private void experienceStep() {
         if (!cornerStepTwo()) {
+            // 4
             // fiveSquareStep();
+            // 5
+            // stepOneByProb();
+            // 6
             randomStep();
         }
     }
@@ -721,7 +725,7 @@ public class RobotPlayer {
         for (int x = 1; x <= xDim; x++) {
             for (int y = 1; y <= yDim; y++) {
                 // System.out.print(probMine[x][y] + " ");
-                if (probMine[x][y] < 49 && probMine[x][y] < prob && Math.abs(probMine[x][y] - prob) < eps2) {
+                if (probMine[x][y] < 50 && probMine[x][y] < prob && Math.abs(probMine[x][y] - prob) < eps2) {
                     xProb = x;
                     yProb = y;
                 }
@@ -733,9 +737,10 @@ public class RobotPlayer {
 
         // System.out.println(" --------------------------- ");
         if (probMine[xProb][yProb] > 99) {
-            return false;
+            randomStep();
+        } else {
+            stepLeftButton(xProb, yProb);
         }
-        stepLeftButton(xProb, yProb);
         return true;
     }
 
